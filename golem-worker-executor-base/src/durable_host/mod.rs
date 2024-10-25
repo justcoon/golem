@@ -118,6 +118,7 @@ pub mod wasm_rpc;
 mod durability;
 mod replay_state;
 mod sync_helper;
+pub mod rdbms;
 
 /// Partial implementation of the WorkerCtx interfaces for adding durable execution to workers.
 pub struct DurableWorkerCtx<Ctx: WorkerCtx> {
