@@ -40,7 +40,7 @@ use golem_worker_executor_base::services::worker_enumeration::{
     RunningWorkerEnumerationService, WorkerEnumerationService,
 };
 use golem_worker_executor_base::services::worker_proxy::WorkerProxy;
-use golem_worker_executor_base::services::All;
+use golem_worker_executor_base::services::{rdbms, All};
 use golem_worker_executor_base::wasi_host::create_linker;
 use golem_worker_executor_base::Bootstrap;
 use prometheus::Registry;
@@ -76,6 +76,7 @@ impl Bootstrap<Context> for ServerBootstrap {
         shard_service: Arc<dyn ShardService + Send + Sync>,
         key_value_service: Arc<dyn KeyValueService + Send + Sync>,
         blob_store_service: Arc<dyn BlobStoreService + Send + Sync>,
+        rdbms_service: Arc<dyn rdbms::RdbmsService + Send + Sync>,
         worker_activator: Arc<dyn WorkerActivator + Send + Sync>,
         oplog_service: Arc<dyn OplogService + Send + Sync>,
         scheduler_service: Arc<dyn SchedulerService + Send + Sync>,
@@ -103,6 +104,7 @@ impl Bootstrap<Context> for ServerBootstrap {
             shard_manager_service.clone(),
             key_value_service.clone(),
             blob_store_service.clone(),
+            rdbms_service.clone(),
             oplog_service.clone(),
             scheduler_service.clone(),
             worker_activator.clone(),
@@ -125,6 +127,7 @@ impl Bootstrap<Context> for ServerBootstrap {
             shard_service,
             key_value_service,
             blob_store_service,
+            rdbms_service,
             oplog_service,
             rpc,
             scheduler_service,

@@ -28,6 +28,7 @@ pub mod golem_config;
 pub mod key_value;
 pub mod oplog;
 pub mod promise;
+pub mod rdbms;
 pub mod rpc;
 pub mod scheduler;
 pub mod shard;
@@ -37,7 +38,6 @@ pub mod worker_activator;
 pub mod worker_enumeration;
 pub mod worker_event;
 pub mod worker_proxy;
-
 // HasXXX traits for fine-grained control of which dependencies a function needs
 
 pub trait HasActiveWorkers<Ctx: WorkerCtx> {
@@ -130,6 +130,10 @@ pub trait HasEvents {
     fn events(&self) -> Arc<Events>;
 }
 
+pub trait HasRdbmsService {
+    fn rdbms_service(&self) -> Arc<dyn rdbms::RdbmsService + Send + Sync>;
+}
+
 /// HasAll is a shortcut for requiring all available service dependencies
 pub trait HasAll<Ctx: WorkerCtx>:
     HasActiveWorkers<Ctx>
@@ -142,6 +146,7 @@ pub trait HasAll<Ctx: WorkerCtx>:
     + HasWasmtimeEngine<Ctx>
     + HasKeyValueService
     + HasBlobStoreService
+    + HasRdbmsService
     + HasOplogService
     + HasRpc
     + HasSchedulerService
@@ -167,6 +172,7 @@ impl<
             + HasWasmtimeEngine<Ctx>
             + HasKeyValueService
             + HasBlobStoreService
+            + HasRdbmsService
             + HasOplogService
             + HasRpc
             + HasSchedulerService
@@ -199,6 +205,7 @@ pub struct All<Ctx: WorkerCtx> {
     shard_service: Arc<dyn shard::ShardService + Send + Sync>,
     key_value_service: Arc<dyn key_value::KeyValueService + Send + Sync>,
     blob_store_service: Arc<dyn blob_store::BlobStoreService + Send + Sync>,
+    rdbms_service: Arc<dyn rdbms::RdbmsService + Send + Sync>,
     oplog_service: Arc<dyn oplog::OplogService + Send + Sync>,
     rpc: Arc<dyn rpc::Rpc + Send + Sync>,
     scheduler_service: Arc<dyn scheduler::SchedulerService + Send + Sync>,
@@ -230,6 +237,7 @@ impl<Ctx: WorkerCtx> Clone for All<Ctx> {
             scheduler_service: self.scheduler_service.clone(),
             worker_activator: self.worker_activator.clone(),
             worker_proxy: self.worker_proxy.clone(),
+            rdbms_service: self.rdbms_service.clone(),
             events: self.events.clone(),
             extra_deps: self.extra_deps.clone(),
         }
@@ -257,6 +265,7 @@ impl<Ctx: WorkerCtx> All<Ctx> {
         shard_service: Arc<dyn shard::ShardService + Send + Sync>,
         key_value_service: Arc<dyn key_value::KeyValueService + Send + Sync>,
         blob_store_service: Arc<dyn blob_store::BlobStoreService + Send + Sync>,
+        rdbms_service: Arc<dyn rdbms::RdbmsService + Send + Sync>,
         oplog_service: Arc<dyn oplog::OplogService + Send + Sync>,
         rpc: Arc<dyn rpc::Rpc + Send + Sync>,
         scheduler_service: Arc<dyn scheduler::SchedulerService + Send + Sync>,
@@ -280,6 +289,7 @@ impl<Ctx: WorkerCtx> All<Ctx> {
             shard_service,
             key_value_service,
             blob_store_service,
+            rdbms_service,
             oplog_service,
             rpc,
             scheduler_service,
@@ -306,6 +316,7 @@ impl<Ctx: WorkerCtx> All<Ctx> {
             this.shard_service(),
             this.key_value_service(),
             this.blob_store_service(),
+            this.rdbms_service(),
             this.oplog_service(),
             this.rpc(),
             this.scheduler_service(),
@@ -442,6 +453,12 @@ impl<Ctx: WorkerCtx, T: UsesAllDeps<Ctx = Ctx>> HasWorkerActivator for T {
 impl<Ctx: WorkerCtx, T: UsesAllDeps<Ctx = Ctx>> HasWorkerProxy for T {
     fn worker_proxy(&self) -> Arc<dyn worker_proxy::WorkerProxy + Send + Sync> {
         self.all().worker_proxy.clone()
+    }
+}
+
+impl<Ctx: WorkerCtx, T: UsesAllDeps<Ctx = Ctx>> HasRdbmsService for T {
+    fn rdbms_service(&self) -> Arc<dyn rdbms::RdbmsService + Send + Sync> {
+        self.all().rdbms_service.clone()
     }
 }
 

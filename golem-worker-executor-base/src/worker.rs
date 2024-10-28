@@ -30,9 +30,9 @@ use crate::services::oplog::{CommitLevel, Oplog, OplogOps};
 use crate::services::worker_event::{WorkerEventService, WorkerEventServiceDefault};
 use crate::services::{
     All, HasActiveWorkers, HasAll, HasBlobStoreService, HasComponentService, HasConfig, HasEvents,
-    HasExtraDeps, HasKeyValueService, HasOplog, HasOplogService, HasPromiseService, HasRpc,
-    HasSchedulerService, HasWasmtimeEngine, HasWorker, HasWorkerEnumerationService, HasWorkerProxy,
-    HasWorkerService, UsesAllDeps,
+    HasExtraDeps, HasKeyValueService, HasOplog, HasOplogService, HasPromiseService,
+    HasRdbmsService, HasRpc, HasSchedulerService, HasWasmtimeEngine, HasWorker,
+    HasWorkerEnumerationService, HasWorkerProxy, HasWorkerService, UsesAllDeps,
 };
 use crate::workerctx::{PublicWorkerIo, WorkerCtx};
 use anyhow::anyhow;
@@ -1206,6 +1206,7 @@ impl RunningWorker {
             parent.worker_enumeration_service(),
             parent.key_value_service(),
             parent.blob_store_service(),
+            parent.rdbms_service(),
             parent.event_service.clone(),
             parent.active_workers(),
             parent.oplog_service(),
