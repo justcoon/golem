@@ -62,6 +62,7 @@ exclude = [
     "test-components/variant-service",
     "test-components/write-stderr",
     "test-components/write-stdout",
+    "test-components/rdbms-service",
 ]
 
 [profile.dev]
