@@ -61,6 +61,7 @@ pub mod transactions;
 pub mod ts_rpc1;
 pub mod ts_rpc2;
 pub mod wasi;
+pub mod rdbms;
 
 test_r::enable!();
 
