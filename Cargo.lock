@@ -3980,14 +3980,14 @@ dependencies = [
 
 [[package]]
 name = "golem-wit"
-version = "0.0.0"
-source = "git+https://github.com/justcoon/golem-wit.git?branch=rdbms#a2dc99820b95d0ec32984c16020e49604dceafc8"
-
-[[package]]
-name = "golem-wit"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1569dc406fb17db6eafddcb5d23fccf22720f2c384350d2e62954de09eb052a"
+
+[[package]]
+name = "golem-wit"
+version = "1.0.5"
+source = "git+https://github.com/justcoon/golem-wit.git?branch=rdbms#c460756a3cbe5b8718a03dca5814456f322ebbea"
 
 [[package]]
 name = "golem-worker-executor"
@@ -4058,7 +4058,7 @@ dependencies = [
  "golem-test-framework",
  "golem-wasm-ast",
  "golem-wasm-rpc",
- "golem-wit 0.0.0",
+ "golem-wit 1.0.5",
  "hex",
  "http 0.2.12",
  "http 1.1.0",
