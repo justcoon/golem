@@ -85,6 +85,7 @@ conditional-trait-gen = "0.4.1"
 console-subscriber = "0.3.0"
 ctor = "0.2.6"
 dashmap = "5.5.3"
+deadpool-postgres = "0.14.0"
 derive_more = "0.99.17"
 figment = { version = "0.10.14", features = ["toml", "env"] }
 fred = { version = "9.0.3", features = [
