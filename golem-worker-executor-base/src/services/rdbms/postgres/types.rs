@@ -107,6 +107,33 @@ impl NamedType for DomainType {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RangeType {
+    pub name: String,
+    pub base_type: Box<DbColumnType>,
+}
+
+impl RangeType {
+    pub fn new(name: String, base_type: DbColumnType) -> Self {
+        RangeType {
+            name,
+            base_type: Box::new(base_type),
+        }
+    }
+}
+
+impl Display for RangeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({})", self.name, self.base_type)
+    }
+}
+
+impl NamedType for RangeType {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ValuesRange<T> {
     pub start: Bound<T>,
@@ -246,6 +273,33 @@ impl Display for Domain {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Range {
+    pub name: String,
+    pub value: Box<ValuesRange<DbValue>>,
+}
+
+impl Range {
+    pub fn new(name: String, value: ValuesRange<DbValue>) -> Self {
+        Range {
+            name,
+            value: Box::new(value),
+        }
+    }
+}
+
+impl NamedType for Range {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl Display for Range {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({})", self.name, self.value)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DbColumnType {
     Character,
@@ -287,6 +341,7 @@ pub enum DbColumnType {
     Enum(EnumType),
     Composite(CompositeType),
     Domain(DomainType),
+    Range(RangeType),
     Array(Box<DbColumnType>),
 }
 
@@ -355,6 +410,9 @@ impl Display for DbColumnType {
             DbColumnType::Array(v) => {
                 write!(f, "{}[]", v)
             }
+            DbColumnType::Range(v) => {
+                write!(f, "range: {}", v)
+            }
             DbColumnType::Money => write!(f, "money"),
         }
     }
@@ -401,6 +459,7 @@ pub enum DbValue {
     Enum(Enum),
     Composite(Composite),
     Domain(Domain),
+    Range(Range),
     Array(Vec<DbValue>),
     Null,
 }
@@ -448,6 +507,7 @@ impl Display for DbValue {
             DbValue::Composite(v) => write!(f, "{}", v),
             DbValue::Domain(v) => write!(f, "{}", v),
             DbValue::Array(v) => write!(f, "[{}]", v.iter().format(", ")),
+            DbValue::Range(v) => write!(f, "{}", v),
             DbValue::Null => write!(f, "NULL"),
         }
     }

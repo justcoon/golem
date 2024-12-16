@@ -1403,6 +1403,7 @@ fn from_db_value(
                 DbValueResourceRep::Array(new_resource_reps),
             ))
         }
+        postgres_types::DbValue::Range(_) => todo!(),
         postgres_types::DbValue::Null => Ok((DbValue::Null, DbValueResourceRep::None)),
     }
 }
@@ -1606,6 +1607,7 @@ fn from_db_column_type(
                 DbColumnTypeResourceRep::Array(new_resource_rep),
             ))
         }
+        postgres_types::DbColumnType::Range(_) => todo!(),
     }
 }
 
