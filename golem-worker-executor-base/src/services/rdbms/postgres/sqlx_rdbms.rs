@@ -15,7 +15,7 @@
 use crate::services::golem_config::{RdbmsConfig, RdbmsPoolConfig};
 use crate::services::rdbms::postgres::types::{
     Composite, CompositeType, DbColumn, DbColumnType, DbValue, Domain, DomainType, Enum, EnumType,
-    Interval, NamedType, Range, TimeTz,
+    Interval, NamedType, RangeType, TimeTz, ValuesRange,
 };
 use crate::services::rdbms::postgres::{PostgresType, POSTGRES};
 use crate::services::rdbms::sqlx_common::{
@@ -103,6 +103,475 @@ impl<'q> QueryParamsBinder<'q, PostgresType, sqlx::Postgres>
     }
 }
 
+trait EncodeAndType<'a>: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> {}
+
+fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, String>
+{
+    match value {
+        DbValue::Character(v) => Ok(Box::new(v)),
+        DbValue::Int2(v) => Ok(Box::new(v)),
+        DbValue::Int4(v) => Ok(Box::new(v)),
+        DbValue::Int8(v) => Ok(Box::new(v)),
+        // DbValue::Float4(v) => Ok(v),
+        // DbValue::Float8(v) => Ok(v),
+        // DbValue::Numeric(v) => Ok(v),
+        // DbValue::Boolean(v) => Ok(v),
+        // DbValue::Text(v) => Ok(v),
+        // DbValue::Varchar(v) => Ok(v),
+        // DbValue::Bpchar(v) => Ok(v),
+        // DbValue::Bytea(v) => Ok(v),
+        // DbValue::Uuid(v) => Ok(v),
+        // DbValue::Json(v) => Ok(v),
+        // DbValue::Jsonb(v) => Ok(v),
+        // DbValue::Jsonpath(v) => Ok(PgJsonPath(v)),
+        // DbValue::Xml(v) => Ok(PgXml(v)),
+        // DbValue::Timestamp(v) => Ok(v),
+        // DbValue::Timestamptz(v) => Ok(v),
+        // DbValue::Time(v) => Ok(v),
+        // DbValue::Timetz(v) => Ok(PgTimeTz::from(v)),
+        // DbValue::Date(v) => Ok(v),
+        // DbValue::Interval(v) => Ok(PgInterval::from(v)),
+        // DbValue::Inet(v) => Ok(v),
+        // DbValue::Cidr(v) => Ok(v),
+        // DbValue::Macaddr(v) => Ok(v),
+        // DbValue::Bit(v) => Ok(v),
+        // DbValue::Varbit(v) => Ok(v),
+        // DbValue::Int4range(v) => Ok(PgRange::from(v)),
+        // DbValue::Int8range(v) => Ok(PgRange::from(v)),
+        // DbValue::Numrange(v) => Ok(PgRange::from(v)),
+        // DbValue::Tsrange(v) => Ok(PgRange::from(v)),
+        // DbValue::Tstzrange(v) => Ok(PgRange::from(v)),
+        // DbValue::Daterange(v) => Ok(PgRange::from(v)),
+        // DbValue::Money(v) => Ok(PgMoney(v)),
+        // DbValue::Oid(v) => Ok(Oid(v)),
+        // DbValue::Enum(v) => Ok(v),
+        // DbValue::Composite(v) => Ok(v),
+        // DbValue::Domain(v) => Ok(v),
+        // DbValue::Range(v) => todo!(),
+        // DbValue::Array(vs) => get_plain_value_array(vs),
+        // DbValue::Null => Ok(PgNull {}) ,
+        _ => Err("Err".to_string())
+    }
+}
+
+// fn get_plain_value_array<'a>(values: Vec<DbValue>) -> Result<impl sqlx::Encode<'a, sqlx::Postgres>  + Type<sqlx::Postgres>, String>
+// // where
+// //     T: 'a + sqlx::Encode<'a, sqlx::Postgres> + Type<sqlx::Postgres>,
+// {
+//     if values.is_empty() {
+//         Ok(PgNull {})
+//     } else {
+//         let first = &values[0];
+//         match first {
+//             DbValue::Character(_) => {
+//                 let values: Vec<i8> = get_plain_values(values, |v| {
+//                     if let DbValue::Character(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Int2(_) => {
+//                 let values: Vec<i16> = get_plain_values(values, |v| {
+//                     if let DbValue::Int2(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Int4(_) => {
+//                 let values: Vec<i32> = get_plain_values(values, |v| {
+//                     if let DbValue::Int4(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Int8(_) => {
+//                 let values: Vec<i64> = get_plain_values(values, |v| {
+//                     if let DbValue::Int8(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Numeric(_) => {
+//                 let values: Vec<BigDecimal> = get_plain_values(values, |v| {
+//                     if let DbValue::Numeric(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Float4(_) => {
+//                 let values: Vec<f32> = get_plain_values(values, |v| {
+//                     if let DbValue::Float4(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//
+//             DbValue::Float8(_) => {
+//                 let values: Vec<f64> = get_plain_values(values, |v| {
+//                     if let DbValue::Float8(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Boolean(_) => {
+//                 let values: Vec<bool> = get_plain_values(values, |v| {
+//                     if let DbValue::Boolean(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Text(_) => {
+//                 let values: Vec<String> = get_plain_values(values, |v| {
+//                     if let DbValue::Text(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Varchar(_) => {
+//                 let values: Vec<String> = get_plain_values(values, |v| {
+//                     if let DbValue::Varchar(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Bpchar(_) => {
+//                 let values: Vec<String> = get_plain_values(values, |v| {
+//                     if let DbValue::Bpchar(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Bytea(_) => {
+//                 let values: Vec<Vec<u8>> = get_plain_values(values, |v| {
+//                     if let DbValue::Bytea(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Uuid(_) => {
+//                 let values: Vec<Uuid> = get_plain_values(values, |v| {
+//                     if let DbValue::Uuid(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Json(_) => {
+//                 let values: Vec<serde_json::Value> = get_plain_values(values, |v| {
+//                     if let DbValue::Json(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Jsonb(_) => {
+//                 let values: Vec<serde_json::Value> = get_plain_values(values, |v| {
+//                     if let DbValue::Jsonb(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Jsonpath(_) => {
+//                 let values: Vec<PgJsonPath> = get_plain_values(values, |v| {
+//                     if let DbValue::Jsonpath(v) = v {
+//                         Some(PgJsonPath(v))
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Xml(_) => {
+//                 let values: Vec<PgXml> = get_plain_values(values, |v| {
+//                     if let DbValue::Xml(v) = v {
+//                         Some(PgXml(v))
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Timestamptz(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Timestamptz(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Timestamp(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Timestamp(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Date(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Date(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Time(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Time(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Timetz(_) => {
+//                 let values: Vec<PgTimeTz> = get_plain_values(values, |v| {
+//                     if let DbValue::Timetz(v) = v {
+//                         Some(v.into())
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Interval(_) => {
+//                 let values: Vec<PgInterval> = get_plain_values(values, |v| {
+//                     if let DbValue::Interval(v) = v {
+//                         Some(v.into())
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Inet(_) => {
+//                 let values: Vec<IpAddr> = get_plain_values(values, |v| {
+//                     if let DbValue::Inet(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Cidr(_) => {
+//                 let values: Vec<IpAddr> = get_plain_values(values, |v| {
+//                     if let DbValue::Cidr(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Macaddr(_) => {
+//                 let values: Vec<MacAddress> = get_plain_values(values, |v| {
+//                     if let DbValue::Macaddr(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Bit(_) => {
+//                 let values: Vec<BitVec> = get_plain_values(values, |v| {
+//                     if let DbValue::Bit(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Varbit(_) => {
+//                 let values: Vec<BitVec> = get_plain_values(values, |v| {
+//                     if let DbValue::Varbit(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Int4range(_) => {
+//                 let values: Vec<PgRange<i32>> = get_plain_values(values, |v| {
+//                     if let DbValue::Int4range(v) = v {
+//                         Some(v.into())
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Int8range(_) => {
+//                 let values: Vec<PgRange<i64>> = get_plain_values(values, |v| {
+//                     if let DbValue::Int8range(v) = v {
+//                         Some(v.into())
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Numrange(_) => {
+//                 let values: Vec<PgRange<BigDecimal>> = get_plain_values(values, |v| {
+//                     if let DbValue::Numrange(v) = v {
+//                         Some(v.into())
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Tsrange(_) => {
+//                 let values: Vec<PgRange<chrono::NaiveDateTime>> = get_plain_values(values, |v| {
+//                     if let DbValue::Tsrange(v) = v {
+//                         Some(v.into())
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Tstzrange(_) => {
+//                 let values: Vec<PgRange<chrono::DateTime<chrono::Utc>>> =
+//                     get_plain_values(values, |v| {
+//                         if let DbValue::Tstzrange(v) = v {
+//                             Some(v.into())
+//                         } else {
+//                             None
+//                         }
+//                     })?;
+//                 Ok(values)
+//             }
+//             DbValue::Daterange(_) => {
+//                 let values: Vec<PgRange<chrono::NaiveDate>> = get_plain_values(values, |v| {
+//                     if let DbValue::Daterange(v) = v {
+//                         Some(v.into())
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Oid(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Oid(v) = v {
+//                         Some(Oid(v))
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Money(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Money(v) = v {
+//                         Some(PgMoney(v))
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(values)
+//             }
+//             DbValue::Enum(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Enum(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(PgEnums(values))
+//             }
+//             DbValue::Composite(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Composite(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(PgComposites(values))
+//             }
+//             DbValue::Domain(_) => {
+//                 let values: Vec<_> = get_plain_values(values, |v| {
+//                     if let DbValue::Domain(v) = v {
+//                         Some(v)
+//                     } else {
+//                         None
+//                     }
+//                 })?;
+//                 Ok(PgDomains(values))
+//             }
+//             DbValue::Range(_) => {
+//                 todo!()
+//             }
+//             DbValue::Array(_) => Err("Array of arrays is not supported".to_string()),
+//             DbValue::Null => Err(format!(
+//                 "Array param element '{}' with index 0 is not supported",
+//                 first
+//             )),
+//         }
+//     }
+// }
+//
+fn set_value2<'a, S: PgValueSetter<'a>>(setter: &mut S, value: DbValue) -> Result<(), String> {
+    let v = get_plain_value(value)?;
+    setter.try_set_value(*v)
+}
+
 fn set_value<'a, S: PgValueSetter<'a>>(setter: &mut S, value: DbValue) -> Result<(), String> {
     match value {
         DbValue::Character(v) => setter.try_set_value(v),
@@ -144,6 +613,7 @@ fn set_value<'a, S: PgValueSetter<'a>>(setter: &mut S, value: DbValue) -> Result
         DbValue::Enum(v) => setter.try_set_value(v),
         DbValue::Composite(v) => setter.try_set_value(v),
         DbValue::Domain(v) => setter.try_set_value(v),
+        DbValue::Range(v) => todo!(),
         DbValue::Array(vs) => set_value_array(setter, vs),
         DbValue::Null => setter.try_set_value(PgNull {}),
     }
@@ -550,6 +1020,9 @@ fn set_value_array<'a, S: PgValueSetter<'a>>(
                 })?;
                 setter.try_set_value(PgDomains(values))
             }
+            DbValue::Range(_) => {
+                todo!()
+            }
             DbValue::Array(_) => Err("Array of arrays is not supported".to_string()),
             DbValue::Null => Err(format!(
                 "Array param element '{}' with index 0 is not supported",
@@ -760,6 +1233,7 @@ fn get_db_value<G: PgValueGetter>(
             let v: Option<Domain> = getter.try_get_value()?;
             DbValue::primitive_from(v.map(DbValue::Domain))
         }
+        DbColumnType::Range(_) => todo!(),
         DbColumnType::Array(v) => get_db_value_array(v, getter)?,
     };
     Ok(value)
@@ -927,6 +1401,9 @@ fn get_db_value_array<G: PgValueGetter>(
             let vs: Option<PgDomains> = getter.try_get_value()?;
             DbValue::array_from(vs.map(|v| v.0), DbValue::Domain)
         }
+        DbColumnType::Range(_) => {
+            todo!()
+        }
         DbColumnType::Array(_) => Err("Array of arrays is not supported".to_string())?,
     };
     Ok(value)
@@ -1046,10 +1523,17 @@ fn get_db_column_type(type_info: &sqlx::postgres::PgTypeInfo) -> Result<DbColumn
                 let base_type = get_db_column_type(base_type)?;
                 Ok(DbColumnType::Domain(DomainType::new(type_name, base_type)))
             }
+            PgTypeKind::Range(base_type) => {
+                let base_type = get_db_column_type(base_type)?;
+                Ok(DbColumnType::Range(RangeType::new(type_name, base_type)))
+            }
             PgTypeKind::Array(element_type)
                 if matches!(
                     element_type.kind(),
-                    PgTypeKind::Enum(_) | PgTypeKind::Domain(_) | PgTypeKind::Composite(_)
+                    PgTypeKind::Enum(_)
+                        | PgTypeKind::Domain(_)
+                        | PgTypeKind::Composite(_)
+                        | PgTypeKind::Range(_)
                 ) =>
             {
                 let column_type = get_db_column_type(element_type)?;
@@ -1060,8 +1544,8 @@ fn get_db_column_type(type_info: &sqlx::postgres::PgTypeInfo) -> Result<DbColumn
     }
 }
 
-impl<T> From<Range<T>> for PgRange<T> {
-    fn from(range: Range<T>) -> Self {
+impl<T> From<ValuesRange<T>> for PgRange<T> {
+    fn from(range: ValuesRange<T>) -> Self {
         PgRange {
             start: range.start,
             end: range.end,
@@ -1069,9 +1553,9 @@ impl<T> From<Range<T>> for PgRange<T> {
     }
 }
 
-impl<T> From<PgRange<T>> for Range<T> {
+impl<T> From<PgRange<T>> for ValuesRange<T> {
     fn from(range: PgRange<T>) -> Self {
-        Range {
+        ValuesRange {
             start: range.start,
             end: range.end,
         }
@@ -1166,6 +1650,7 @@ impl<'a> PgValueSetter<'a> for sqlx::postgres::PgArgumentBuffer {
         Ok(())
     }
 }
+
 
 struct PgRowColumnValueGetter<'r> {
     index: usize,

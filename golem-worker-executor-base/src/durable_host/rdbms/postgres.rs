@@ -539,12 +539,12 @@ impl From<chrono::DateTime<chrono::Utc>> for Timestamptz {
     }
 }
 
-type NaiveDateTimeBounds = postgres_types::Range<chrono::NaiveDateTime>;
-type NaiveDateBounds = postgres_types::Range<chrono::NaiveDate>;
-type DateTimeBounds = postgres_types::Range<chrono::DateTime<chrono::Utc>>;
-type I32Bounds = postgres_types::Range<i32>;
-type I64Bounds = postgres_types::Range<i64>;
-type BigDecimalBounds = postgres_types::Range<BigDecimal>;
+type NaiveDateTimeBounds = postgres_types::ValuesRange<chrono::NaiveDateTime>;
+type NaiveDateBounds = postgres_types::ValuesRange<chrono::NaiveDate>;
+type DateTimeBounds = postgres_types::ValuesRange<chrono::DateTime<chrono::Utc>>;
+type I32Bounds = postgres_types::ValuesRange<i32>;
+type I64Bounds = postgres_types::ValuesRange<i64>;
+type BigDecimalBounds = postgres_types::ValuesRange<BigDecimal>;
 
 impl From<Int4range> for I32Bounds {
     fn from(value: Int4range) -> Self {
@@ -1026,6 +1026,7 @@ pub(crate) mod postgres_utils {
                         child_builder.nodes,
                     )
                 }
+                postgres_types::DbValue::Range(_) => todo!(),
                 postgres_types::DbValue::Array(vs) => {
                     let mut child_builder = self.child_builder();
                     let mut values: Vec<NodeIndex> = Vec::with_capacity(vs.len());
@@ -1250,6 +1251,7 @@ pub(crate) mod postgres_utils {
                         child_builder.nodes,
                     )
                 }
+                postgres_types::DbColumnType::Range(_) => todo!(),
                 postgres_types::DbColumnType::Array(v) => {
                     let mut child_builder = self.child_builder();
                     let value_node_index = child_builder.add(*v);

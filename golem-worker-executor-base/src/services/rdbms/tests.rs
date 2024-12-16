@@ -249,7 +249,7 @@ async fn postgres_execute_test_create_insert_select(
             vec![postgres_types::DbValue::Varchar(format!("{:03}", i))];
 
         if i % 2 == 0 {
-            let tstzbounds = postgres_types::Range::new(
+            let tstzbounds = postgres_types::ValuesRange::new(
                 Bound::Included(chrono::DateTime::from_naive_utc_and_offset(
                     chrono::NaiveDateTime::new(
                         chrono::NaiveDate::from_ymd_opt(2023, 3, 2 + i as u32).unwrap(),
@@ -265,7 +265,7 @@ async fn postgres_execute_test_create_insert_select(
                     chrono::Utc,
                 )),
             );
-            let tsbounds = postgres_types::Range::new(
+            let tsbounds = postgres_types::ValuesRange::new(
                 Bound::Included(chrono::NaiveDateTime::new(
                     chrono::NaiveDate::from_ymd_opt(2022, 2, 2 + i as u32).unwrap(),
                     chrono::NaiveTime::from_hms_opt(16, 50, 30).unwrap(),
@@ -328,21 +328,21 @@ async fn postgres_execute_test_create_insert_select(
                 postgres_types::DbValue::Bit(BitVec::from_iter(vec![true, false, true])),
                 postgres_types::DbValue::Varbit(BitVec::from_iter(vec![true, false, false])),
                 postgres_types::DbValue::Xml(format!("<foo>{}</foo>", i)),
-                postgres_types::DbValue::Int4range(postgres_types::Range::new(
+                postgres_types::DbValue::Int4range(postgres_types::ValuesRange::new(
                     Bound::Included(1),
                     Bound::Excluded(4),
                 )),
-                postgres_types::DbValue::Int8range(postgres_types::Range::new(
+                postgres_types::DbValue::Int8range(postgres_types::ValuesRange::new(
                     Bound::Included(1),
                     Bound::Unbounded,
                 )),
-                postgres_types::DbValue::Numrange(postgres_types::Range::new(
+                postgres_types::DbValue::Numrange(postgres_types::ValuesRange::new(
                     Bound::Included(BigDecimal::from(11)),
                     Bound::Excluded(BigDecimal::from(221)),
                 )),
                 postgres_types::DbValue::Tsrange(tsbounds),
                 postgres_types::DbValue::Tstzrange(tstzbounds),
-                postgres_types::DbValue::Daterange(postgres_types::Range::new(
+                postgres_types::DbValue::Daterange(postgres_types::ValuesRange::new(
                     Bound::Included(
                         chrono::NaiveDate::from_ymd_opt(2023 + i as i32, 2, 3).unwrap(),
                     ),
@@ -893,7 +893,7 @@ async fn postgres_execute_test_create_insert_select_array(
             vec![postgres_types::DbValue::Varchar(format!("{:03}", i))];
 
         if i % 2 == 0 {
-            let tstzbounds = postgres_types::Range::new(
+            let tstzbounds = postgres_types::ValuesRange::new(
                 Bound::Included(chrono::DateTime::from_naive_utc_and_offset(
                     chrono::NaiveDateTime::new(
                         chrono::NaiveDate::from_ymd_opt(2023, 3, 2 + i as u32).unwrap(),
@@ -909,7 +909,7 @@ async fn postgres_execute_test_create_insert_select_array(
                     chrono::Utc,
                 )),
             );
-            let tsbounds = postgres_types::Range::new(
+            let tsbounds = postgres_types::ValuesRange::new(
                 Bound::Included(chrono::NaiveDateTime::new(
                     chrono::NaiveDate::from_ymd_opt(2022, 2, 2 + i as u32).unwrap(),
                     chrono::NaiveTime::from_hms_opt(16, 50, 30).unwrap(),
@@ -1014,13 +1014,13 @@ async fn postgres_execute_test_create_insert_select_array(
                     i
                 ))]),
                 postgres_types::DbValue::Array(vec![postgres_types::DbValue::Int4range(
-                    postgres_types::Range::new(Bound::Included(1), Bound::Excluded(4)),
+                    postgres_types::ValuesRange::new(Bound::Included(1), Bound::Excluded(4)),
                 )]),
                 postgres_types::DbValue::Array(vec![postgres_types::DbValue::Int8range(
-                    postgres_types::Range::new(Bound::Included(1), Bound::Unbounded),
+                    postgres_types::ValuesRange::new(Bound::Included(1), Bound::Unbounded),
                 )]),
                 postgres_types::DbValue::Array(vec![postgres_types::DbValue::Numrange(
-                    postgres_types::Range::new(
+                    postgres_types::ValuesRange::new(
                         Bound::Included(BigDecimal::from(11)),
                         Bound::Excluded(BigDecimal::from(221)),
                     ),
@@ -1030,7 +1030,7 @@ async fn postgres_execute_test_create_insert_select_array(
                     tstzbounds,
                 )]),
                 postgres_types::DbValue::Array(vec![postgres_types::DbValue::Daterange(
-                    postgres_types::Range::new(
+                    postgres_types::ValuesRange::new(
                         Bound::Included(
                             chrono::NaiveDate::from_ymd_opt(2023 + i as i32, 2, 3).unwrap(),
                         ),

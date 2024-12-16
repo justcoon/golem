@@ -154,8 +154,29 @@ interface postgres {
     value: node-index
   }
 
+  record range-type {
+    name: string,
+    base-type: node-index
+  }
+
+  variant value-bound {
+    included(node-index),
+    excluded(node-index),
+    unbounded
+  }
+
+  record values-range {
+    start: value-bound,
+    end: value-bound
+  }
+
+  record range {
+    name: string,
+    value: values-range
+  }
+
   record db-column-type {
-      nodes: list<db-column-type-node>
+    nodes: list<db-column-type-node>
   }
 
   variant db-column-type-node {
@@ -198,22 +219,8 @@ interface postgres {
     enumeration(enumeration-type),
     composite(composite-type),
     domain(domain-type),
+    range(range-type),
     array(node-index)
-    //     point,
-    //     line,
-    //     lseg,
-    //     box,
-    //     polygon,
-    //     circle,
-    //     path,
-    //     box2d,
-    //     polygonz,
-    //     circlez,
-    //     pathz,
-    //     hstore,
-    //     tsvector,
-    //     tsquery,
-    //     range
   }
 
   variant db-value-node {
@@ -256,6 +263,7 @@ interface postgres {
     enumeration(enumeration),
     composite(composite),
     domain(domain),
+    range(range),
     array(list<node-index>),
     null
   }
@@ -263,112 +271,6 @@ interface postgres {
   record db-value {
     nodes: list<db-value-node>
   }
-
-//   variant db-column-type-primitive {
-//     character,
-//     int2,
-//     int4,
-//     int8,
-//     float4,
-//     float8,
-//     numeric,
-//     boolean,
-//     text,
-//     varchar,
-//     bpchar,
-//     timestamp,
-//     timestamptz,
-//     date,
-//     time,
-//     timetz,
-//     interval,
-//     bytea,
-//     uuid,
-//     xml,
-//     json,
-//     jsonb,
-//     jsonpath,
-//     inet,
-//     cidr,
-//     macaddr,
-//     bit,
-//     varbit,
-//     int4range,
-//     int8range,
-//     numrange,
-//     tsrange,
-//     tstzrange,
-//     daterange,
-//     money,
-//     oid,
-//     enumeration(string)
-//     //     point,
-//     //     line,
-//     //     lseg,
-//     //     box,
-//     //     polygon,
-//     //     circle,
-//     //     path,
-//     //     box2d,
-//     //     polygonz,
-//     //     circlez,
-//     //     pathz,
-//     //     hstore,
-//     //     tsvector,
-//     //     tsquery,
-//     //     range
-//   }
-//
-//   variant db-value-primitive {
-//     character(s8),
-//     int2(s16),
-//     int4(s32),
-//     int8(s64),
-//     float4(float32),
-//     float8(float64),
-//     numeric(string),
-//     boolean(bool),
-//     text(string),
-//     varchar(string),
-//     bpchar(string),
-//     timestamp(timestamp),
-//     timestamptz(timestamptz),
-//     date(date),
-//     time(time),
-//     timetz(timetz),
-//     interval(interval),
-//     bytea(list<u8>),
-//     json(string),
-//     jsonb(string),
-//     jsonpath(string),
-//     xml(string),
-//     uuid(uuid),
-//     inet(ip-address),
-//     cidr(ip-address),
-//     macaddr(mac-address),
-//     bit(list<bool>),
-//     varbit(list<bool>),
-//     int4range(int4range),
-//     int8range(int8range),
-//     numrange(numrange),
-//     tsrange(tsrange),
-//     tstzrange(tstzrange),
-//     daterange(daterange),
-//     money(s64),
-//     oid(u32),
-//     enumeration(enumeration),
-//     null
-//   }
-//
-//   variant db-column-type {
-//     primitive(db-column-type-primitive),
-//     array(db-column-type-primitive)
-//   }
-//
-//   variant db-value {
-//     primitive(db-value-primitive),
-//     array(list<db-value-primitive>) // Flatteneed
-//   }
 
   record db-column {
     ordinal:     u64,

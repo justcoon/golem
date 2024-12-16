@@ -455,6 +455,65 @@ pub mod wasi {
                 }
             }
             #[derive(Clone)]
+            pub struct RangeType {
+                pub name: _rt::String,
+                pub base_type: NodeIndex,
+            }
+            impl ::core::fmt::Debug for RangeType {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    f.debug_struct("RangeType")
+                        .field("name", &self.name)
+                        .field("base-type", &self.base_type)
+                        .finish()
+                }
+            }
+            #[derive(Clone, Copy)]
+            pub enum ValueBound {
+                Included(NodeIndex),
+                Excluded(NodeIndex),
+                Unbounded,
+            }
+            impl ::core::fmt::Debug for ValueBound {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    match self {
+                        ValueBound::Included(e) => {
+                            f.debug_tuple("ValueBound::Included").field(e).finish()
+                        }
+                        ValueBound::Excluded(e) => {
+                            f.debug_tuple("ValueBound::Excluded").field(e).finish()
+                        }
+                        ValueBound::Unbounded => f.debug_tuple("ValueBound::Unbounded").finish(),
+                    }
+                }
+            }
+            #[repr(C)]
+            #[derive(Clone, Copy)]
+            pub struct ValuesRange {
+                pub start: ValueBound,
+                pub end: ValueBound,
+            }
+            impl ::core::fmt::Debug for ValuesRange {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    f.debug_struct("ValuesRange")
+                        .field("start", &self.start)
+                        .field("end", &self.end)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
+            pub struct Range {
+                pub name: _rt::String,
+                pub value: ValuesRange,
+            }
+            impl ::core::fmt::Debug for Range {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    f.debug_struct("Range")
+                        .field("name", &self.name)
+                        .field("value", &self.value)
+                        .finish()
+                }
+            }
+            #[derive(Clone)]
             pub enum DbColumnTypeNode {
                 Character,
                 Int2,
@@ -495,6 +554,7 @@ pub mod wasi {
                 Enumeration(EnumerationType),
                 Composite(CompositeType),
                 Domain(DomainType),
+                Range(RangeType),
                 Array(NodeIndex),
             }
             impl ::core::fmt::Debug for DbColumnTypeNode {
@@ -593,6 +653,9 @@ pub mod wasi {
                         DbColumnTypeNode::Domain(e) => {
                             f.debug_tuple("DbColumnTypeNode::Domain").field(e).finish()
                         }
+                        DbColumnTypeNode::Range(e) => {
+                            f.debug_tuple("DbColumnTypeNode::Range").field(e).finish()
+                        }
                         DbColumnTypeNode::Array(e) => {
                             f.debug_tuple("DbColumnTypeNode::Array").field(e).finish()
                         }
@@ -651,6 +714,7 @@ pub mod wasi {
                 Enumeration(Enumeration),
                 Composite(Composite),
                 Domain(Domain),
+                Range(Range),
                 Array(_rt::Vec<NodeIndex>),
                 Null,
             }
@@ -768,6 +832,9 @@ pub mod wasi {
                         DbValueNode::Domain(e) => {
                             f.debug_tuple("DbValueNode::Domain").field(e).finish()
                         }
+                        DbValueNode::Range(e) => {
+                            f.debug_tuple("DbValueNode::Range").field(e).finish()
+                        }
                         DbValueNode::Array(e) => {
                             f.debug_tuple("DbValueNode::Array").field(e).finish()
                         }
@@ -786,111 +853,6 @@ pub mod wasi {
                         .finish()
                 }
             }
-            /// variant db-column-type-primitive {
-            /// character,
-            /// int2,
-            /// int4,
-            /// int8,
-            /// float4,
-            /// float8,
-            /// numeric,
-            /// boolean,
-            /// text,
-            /// varchar,
-            /// bpchar,
-            /// timestamp,
-            /// timestamptz,
-            /// date,
-            /// time,
-            /// timetz,
-            /// interval,
-            /// bytea,
-            /// uuid,
-            /// xml,
-            /// json,
-            /// jsonb,
-            /// jsonpath,
-            /// inet,
-            /// cidr,
-            /// macaddr,
-            /// bit,
-            /// varbit,
-            /// int4range,
-            /// int8range,
-            /// numrange,
-            /// tsrange,
-            /// tstzrange,
-            /// daterange,
-            /// money,
-            /// oid,
-            /// enumeration(string)
-            /// //     point,
-            /// //     line,
-            /// //     lseg,
-            /// //     box,
-            /// //     polygon,
-            /// //     circle,
-            /// //     path,
-            /// //     box2d,
-            /// //     polygonz,
-            /// //     circlez,
-            /// //     pathz,
-            /// //     hstore,
-            /// //     tsvector,
-            /// //     tsquery,
-            /// //     range
-            /// }
-            ///
-            /// variant db-value-primitive {
-            /// character(s8),
-            /// int2(s16),
-            /// int4(s32),
-            /// int8(s64),
-            /// float4(float32),
-            /// float8(float64),
-            /// numeric(string),
-            /// boolean(bool),
-            /// text(string),
-            /// varchar(string),
-            /// bpchar(string),
-            /// timestamp(timestamp),
-            /// timestamptz(timestamptz),
-            /// date(date),
-            /// time(time),
-            /// timetz(timetz),
-            /// interval(interval),
-            /// bytea(list<u8>),
-            /// json(string),
-            /// jsonb(string),
-            /// jsonpath(string),
-            /// xml(string),
-            /// uuid(uuid),
-            /// inet(ip-address),
-            /// cidr(ip-address),
-            /// macaddr(mac-address),
-            /// bit(list<bool>),
-            /// varbit(list<bool>),
-            /// int4range(int4range),
-            /// int8range(int8range),
-            /// numrange(numrange),
-            /// tsrange(tsrange),
-            /// tstzrange(tstzrange),
-            /// daterange(daterange),
-            /// money(s64),
-            /// oid(u32),
-            /// enumeration(enumeration),
-            /// null
-            /// }
-            ///
-            /// variant db-column-type {
-            /// primitive(db-column-type-primitive),
-            /// array(db-column-type-primitive)
-            /// }
-            ///
-            /// variant db-value {
-            /// primitive(db-value-primitive),
-            /// array(list<db-value-primitive>) // Flatteneed
-            /// }
             #[derive(Clone)]
             pub struct DbColumn {
                 pub ordinal: u64,
@@ -1032,12 +994,12 @@ pub mod wasi {
                         wit_import((self).handle() as i32, ptr0);
                         let l1 = *ptr0.add(0).cast::<*mut u8>();
                         let l2 = *ptr0.add(4).cast::<usize>();
-                        let base33 = l1;
-                        let len33 = l2;
-                        let mut result33 = _rt::Vec::with_capacity(len33);
-                        for i in 0..len33 {
-                            let base = base33.add(i * 32);
-                            let e33 = {
+                        let base37 = l1;
+                        let len37 = l2;
+                        let mut result37 = _rt::Vec::with_capacity(len37);
+                        for i in 0..len37 {
+                            let base = base37.add(i * 32);
+                            let e37 = {
                                 let l3 = *base.add(0).cast::<i64>();
                                 let l4 = *base.add(8).cast::<*mut u8>();
                                 let l5 = *base.add(12).cast::<usize>();
@@ -1045,14 +1007,14 @@ pub mod wasi {
                                 let bytes6 = _rt::Vec::from_raw_parts(l4.cast(), len6, len6);
                                 let l7 = *base.add(16).cast::<*mut u8>();
                                 let l8 = *base.add(20).cast::<usize>();
-                                let base29 = l7;
-                                let len29 = l8;
-                                let mut result29 = _rt::Vec::with_capacity(len29);
-                                for i in 0..len29 {
-                                    let base = base29.add(i * 20);
-                                    let e29 = {
+                                let base33 = l7;
+                                let len33 = l8;
+                                let mut result33 = _rt::Vec::with_capacity(len33);
+                                for i in 0..len33 {
+                                    let base = base33.add(i * 20);
+                                    let e33 = {
                                         let l9 = i32::from(*base.add(0).cast::<u8>());
-                                        let v28 = match l9 {
+                                        let v32 = match l9 {
                                             0 => DbColumnTypeNode::Character,
                                             1 => DbColumnTypeNode::Int2,
                                             2 => DbColumnTypeNode::Int4,
@@ -1090,7 +1052,7 @@ pub mod wasi {
                                             34 => DbColumnTypeNode::Money,
                                             35 => DbColumnTypeNode::Oid,
                                             36 => {
-                                                let e28 = {
+                                                let e32 = {
                                                     let l10 = *base.add(4).cast::<*mut u8>();
                                                     let l11 = *base.add(8).cast::<usize>();
                                                     let len12 = l11;
@@ -1104,10 +1066,10 @@ pub mod wasi {
                                                         name: _rt::string_lift(bytes12),
                                                     }
                                                 };
-                                                DbColumnTypeNode::Enumeration(e28)
+                                                DbColumnTypeNode::Enumeration(e32)
                                             }
                                             37 => {
-                                                let e28 = {
+                                                let e32 = {
                                                     let l13 = *base.add(4).cast::<*mut u8>();
                                                     let l14 = *base.add(8).cast::<usize>();
                                                     let len15 = l14;
@@ -1147,10 +1109,10 @@ pub mod wasi {
                                                         attributes: result22,
                                                     }
                                                 };
-                                                DbColumnTypeNode::Composite(e28)
+                                                DbColumnTypeNode::Composite(e32)
                                             }
                                             38 => {
-                                                let e28 = {
+                                                let e32 = {
                                                     let l23 = *base.add(4).cast::<*mut u8>();
                                                     let l24 = *base.add(8).cast::<usize>();
                                                     let len25 = l24;
@@ -1166,43 +1128,62 @@ pub mod wasi {
                                                         base_type: l26 as u32,
                                                     }
                                                 };
-                                                DbColumnTypeNode::Domain(e28)
+                                                DbColumnTypeNode::Domain(e32)
+                                            }
+                                            39 => {
+                                                let e32 = {
+                                                    let l27 = *base.add(4).cast::<*mut u8>();
+                                                    let l28 = *base.add(8).cast::<usize>();
+                                                    let len29 = l28;
+                                                    let bytes29 = _rt::Vec::from_raw_parts(
+                                                        l27.cast(),
+                                                        len29,
+                                                        len29,
+                                                    );
+                                                    let l30 = *base.add(12).cast::<i32>();
+
+                                                    RangeType {
+                                                        name: _rt::string_lift(bytes29),
+                                                        base_type: l30 as u32,
+                                                    }
+                                                };
+                                                DbColumnTypeNode::Range(e32)
                                             }
                                             n => {
                                                 debug_assert_eq!(
-                                                    n, 39,
+                                                    n, 40,
                                                     "invalid enum discriminant"
                                                 );
-                                                let e28 = {
-                                                    let l27 = *base.add(4).cast::<i32>();
+                                                let e32 = {
+                                                    let l31 = *base.add(4).cast::<i32>();
 
-                                                    l27 as u32
+                                                    l31 as u32
                                                 };
-                                                DbColumnTypeNode::Array(e28)
+                                                DbColumnTypeNode::Array(e32)
                                             }
                                         };
 
-                                        v28
+                                        v32
                                     };
-                                    result29.push(e29);
+                                    result33.push(e33);
                                 }
-                                _rt::cabi_dealloc(base29, len29 * 20, 4);
-                                let l30 = *base.add(24).cast::<*mut u8>();
-                                let l31 = *base.add(28).cast::<usize>();
-                                let len32 = l31;
-                                let bytes32 = _rt::Vec::from_raw_parts(l30.cast(), len32, len32);
+                                _rt::cabi_dealloc(base33, len33 * 20, 4);
+                                let l34 = *base.add(24).cast::<*mut u8>();
+                                let l35 = *base.add(28).cast::<usize>();
+                                let len36 = l35;
+                                let bytes36 = _rt::Vec::from_raw_parts(l34.cast(), len36, len36);
 
                                 DbColumn {
                                     ordinal: l3 as u64,
                                     name: _rt::string_lift(bytes6),
-                                    db_type: DbColumnType { nodes: result29 },
-                                    db_type_name: _rt::string_lift(bytes32),
+                                    db_type: DbColumnType { nodes: result33 },
+                                    db_type_name: _rt::string_lift(bytes36),
                                 }
                             };
-                            result33.push(e33);
+                            result37.push(e37);
                         }
-                        _rt::cabi_dealloc(base33, len33 * 32, 8);
-                        result33
+                        _rt::cabi_dealloc(base37, len37 * 32, 8);
+                        result37
                     }
                 }
             }
@@ -1233,35 +1214,35 @@ pub mod wasi {
                                 let e = {
                                     let l2 = *ptr0.add(4).cast::<*mut u8>();
                                     let l3 = *ptr0.add(8).cast::<usize>();
-                                    let base257 = l2;
-                                    let len257 = l3;
-                                    let mut result257 = _rt::Vec::with_capacity(len257);
-                                    for i in 0..len257 {
-                                        let base = base257.add(i * 8);
-                                        let e257 = {
+                                    let base268 = l2;
+                                    let len268 = l3;
+                                    let mut result268 = _rt::Vec::with_capacity(len268);
+                                    for i in 0..len268 {
+                                        let base = base268.add(i * 8);
+                                        let e268 = {
                                             let l4 = *base.add(0).cast::<*mut u8>();
                                             let l5 = *base.add(4).cast::<usize>();
-                                            let base256 = l4;
-                                            let len256 = l5;
-                                            let mut result256 = _rt::Vec::with_capacity(len256);
-                                            for i in 0..len256 {
-                                                let base = base256.add(i * 8);
-                                                let e256 = {
+                                            let base267 = l4;
+                                            let len267 = l5;
+                                            let mut result267 = _rt::Vec::with_capacity(len267);
+                                            for i in 0..len267 {
+                                                let base = base267.add(i * 8);
+                                                let e267 = {
                                                     let l6 = *base.add(0).cast::<*mut u8>();
                                                     let l7 = *base.add(4).cast::<usize>();
-                                                    let base255 = l6;
-                                                    let len255 = l7;
-                                                    let mut result255 =
-                                                        _rt::Vec::with_capacity(len255);
-                                                    for i in 0..len255 {
-                                                        let base = base255.add(i * 56);
-                                                        let e255 = {
+                                                    let base266 = l6;
+                                                    let len266 = l7;
+                                                    let mut result266 =
+                                                        _rt::Vec::with_capacity(len266);
+                                                    for i in 0..len266 {
+                                                        let base = base266.add(i * 56);
+                                                        let e266 = {
                                                             let l8 = i32::from(
                                                                 *base.add(0).cast::<u8>(),
                                                             );
-                                                            let v254 = match l8 {
+                                                            let v265 = match l8 {
                                                                 0 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l9 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1270,10 +1251,10 @@ pub mod wasi {
 
                                                                         l9 as i8
                                                                     };
-                                                                    DbValueNode::Character(e254)
+                                                                    DbValueNode::Character(e265)
                                                                 }
                                                                 1 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l10 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1282,50 +1263,50 @@ pub mod wasi {
 
                                                                         l10 as i16
                                                                     };
-                                                                    DbValueNode::Int2(e254)
+                                                                    DbValueNode::Int2(e265)
                                                                 }
                                                                 2 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l11 = *base
                                                                             .add(8)
                                                                             .cast::<i32>();
 
                                                                         l11
                                                                     };
-                                                                    DbValueNode::Int4(e254)
+                                                                    DbValueNode::Int4(e265)
                                                                 }
                                                                 3 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l12 = *base
                                                                             .add(8)
                                                                             .cast::<i64>();
 
                                                                         l12
                                                                     };
-                                                                    DbValueNode::Int8(e254)
+                                                                    DbValueNode::Int8(e265)
                                                                 }
                                                                 4 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l13 = *base
                                                                             .add(8)
                                                                             .cast::<f32>();
 
                                                                         l13
                                                                     };
-                                                                    DbValueNode::Float4(e254)
+                                                                    DbValueNode::Float4(e265)
                                                                 }
                                                                 5 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l14 = *base
                                                                             .add(8)
                                                                             .cast::<f64>();
 
                                                                         l14
                                                                     };
-                                                                    DbValueNode::Float8(e254)
+                                                                    DbValueNode::Float8(e265)
                                                                 }
                                                                 6 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l15 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1338,10 +1319,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes17)
                                                                     };
-                                                                    DbValueNode::Numeric(e254)
+                                                                    DbValueNode::Numeric(e265)
                                                                 }
                                                                 7 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l18 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1350,10 +1331,10 @@ pub mod wasi {
 
                                                                         _rt::bool_lift(l18 as u8)
                                                                     };
-                                                                    DbValueNode::Boolean(e254)
+                                                                    DbValueNode::Boolean(e265)
                                                                 }
                                                                 8 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l19 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1366,10 +1347,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes21)
                                                                     };
-                                                                    DbValueNode::Text(e254)
+                                                                    DbValueNode::Text(e265)
                                                                 }
                                                                 9 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l22 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1382,10 +1363,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes24)
                                                                     };
-                                                                    DbValueNode::Varchar(e254)
+                                                                    DbValueNode::Varchar(e265)
                                                                 }
                                                                 10 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l25 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1398,10 +1379,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes27)
                                                                     };
-                                                                    DbValueNode::Bpchar(e254)
+                                                                    DbValueNode::Bpchar(e265)
                                                                 }
                                                                 11 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l28 = *base
                                                                             .add(8)
                                                                             .cast::<i32>();
@@ -1449,10 +1430,10 @@ pub mod wasi {
                                                                             },
                                                                         }
                                                                     };
-                                                                    DbValueNode::Timestamp(e254)
+                                                                    DbValueNode::Timestamp(e265)
                                                                 }
                                                                 12 => {
-                                                                    let e254 =
+                                                                    let e265 =
                                                                         {
                                                                             let l35 = *base
                                                                                 .add(8)
@@ -1507,10 +1488,10 @@ pub mod wasi {
                                       offset: l42,
                                     }
                                                                         };
-                                                                    DbValueNode::Timestamptz(e254)
+                                                                    DbValueNode::Timestamptz(e265)
                                                                 }
                                                                 13 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l43 = *base
                                                                             .add(8)
                                                                             .cast::<i32>();
@@ -1531,10 +1512,10 @@ pub mod wasi {
                                                                             day: l45 as u8,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Date(e254)
+                                                                    DbValueNode::Date(e265)
                                                                 }
                                                                 14 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l46 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1561,10 +1542,10 @@ pub mod wasi {
                                                                             nanosecond: l49 as u32,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Time(e254)
+                                                                    DbValueNode::Time(e265)
                                                                 }
                                                                 15 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l50 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1598,10 +1579,10 @@ pub mod wasi {
                                                                             offset: l54,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Timetz(e254)
+                                                                    DbValueNode::Timetz(e265)
                                                                 }
                                                                 16 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l55 = *base
                                                                             .add(8)
                                                                             .cast::<i32>();
@@ -1618,10 +1599,10 @@ pub mod wasi {
                                                                             microseconds: l57,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Interval(e254)
+                                                                    DbValueNode::Interval(e265)
                                                                 }
                                                                 17 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l58 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1637,10 +1618,10 @@ pub mod wasi {
                                                                             len60,
                                                                         )
                                                                     };
-                                                                    DbValueNode::Bytea(e254)
+                                                                    DbValueNode::Bytea(e265)
                                                                 }
                                                                 18 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l61 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1653,10 +1634,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes63)
                                                                     };
-                                                                    DbValueNode::Json(e254)
+                                                                    DbValueNode::Json(e265)
                                                                 }
                                                                 19 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l64 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1669,10 +1650,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes66)
                                                                     };
-                                                                    DbValueNode::Jsonb(e254)
+                                                                    DbValueNode::Jsonb(e265)
                                                                 }
                                                                 20 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l67 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1685,10 +1666,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes69)
                                                                     };
-                                                                    DbValueNode::Jsonpath(e254)
+                                                                    DbValueNode::Jsonpath(e265)
                                                                 }
                                                                 21 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l70 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1701,10 +1682,10 @@ pub mod wasi {
 
                                                                         _rt::string_lift(bytes72)
                                                                     };
-                                                                    DbValueNode::Xml(e254)
+                                                                    DbValueNode::Xml(e265)
                                                                 }
                                                                 22 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l73 = *base
                                                                             .add(8)
                                                                             .cast::<i64>();
@@ -1717,10 +1698,10 @@ pub mod wasi {
                                                                             low_bits: l74 as u64,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Uuid(e254)
+                                                                    DbValueNode::Uuid(e265)
                                                                 }
                                                                 23 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l75 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1772,10 +1753,10 @@ pub mod wasi {
 
                                                                         v88
                                                                     };
-                                                                    DbValueNode::Inet(e254)
+                                                                    DbValueNode::Inet(e265)
                                                                 }
                                                                 24 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l89 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1831,10 +1812,10 @@ pub mod wasi {
 
                                                                         v102
                                                                     };
-                                                                    DbValueNode::Cidr(e254)
+                                                                    DbValueNode::Cidr(e265)
                                                                 }
                                                                 25 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l103 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -1877,10 +1858,10 @@ pub mod wasi {
                                                                             ),
                                                                         }
                                                                     };
-                                                                    DbValueNode::Macaddr(e254)
+                                                                    DbValueNode::Macaddr(e265)
                                                                 }
                                                                 26 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l109 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1915,10 +1896,10 @@ pub mod wasi {
 
                                                                         result112
                                                                     };
-                                                                    DbValueNode::Bit(e254)
+                                                                    DbValueNode::Bit(e265)
                                                                 }
                                                                 27 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l113 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -1953,10 +1934,10 @@ pub mod wasi {
 
                                                                         result116
                                                                     };
-                                                                    DbValueNode::Varbit(e254)
+                                                                    DbValueNode::Varbit(e265)
                                                                 }
                                                                 28 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l117 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -2025,10 +2006,10 @@ pub mod wasi {
                                                                             end: v124,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Int4range(e254)
+                                                                    DbValueNode::Int4range(e265)
                                                                 }
                                                                 29 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l125 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -2097,10 +2078,10 @@ pub mod wasi {
                                                                             end: v132,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Int8range(e254)
+                                                                    DbValueNode::Int8range(e265)
                                                                 }
                                                                 30 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l133 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -2193,10 +2174,10 @@ pub mod wasi {
                                                                             end: v148,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Numrange(e254)
+                                                                    DbValueNode::Numrange(e265)
                                                                 }
                                                                 31 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l149 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -2337,10 +2318,10 @@ pub mod wasi {
                                                                             end: v180,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Tsrange(e254)
+                                                                    DbValueNode::Tsrange(e265)
                                                                 }
                                                                 32 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l181 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -2497,10 +2478,10 @@ pub mod wasi {
                                                                             end: v216,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Tstzrange(e254)
+                                                                    DbValueNode::Tstzrange(e265)
                                                                 }
                                                                 33 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l217 = i32::from(
                                                                             *base
                                                                                 .add(8)
@@ -2601,30 +2582,30 @@ pub mod wasi {
                                                                             end: v232,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Daterange(e254)
+                                                                    DbValueNode::Daterange(e265)
                                                                 }
                                                                 34 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l233 = *base
                                                                             .add(8)
                                                                             .cast::<i64>();
 
                                                                         l233
                                                                     };
-                                                                    DbValueNode::Money(e254)
+                                                                    DbValueNode::Money(e265)
                                                                 }
                                                                 35 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l234 = *base
                                                                             .add(8)
                                                                             .cast::<i32>();
 
                                                                         l234 as u32
                                                                     };
-                                                                    DbValueNode::Oid(e254)
+                                                                    DbValueNode::Oid(e265)
                                                                 }
                                                                 36 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l235 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -2655,10 +2636,10 @@ pub mod wasi {
                                                                             ),
                                                                         }
                                                                     };
-                                                                    DbValueNode::Enumeration(e254)
+                                                                    DbValueNode::Enumeration(e265)
                                                                 }
                                                                 37 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l241 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -2684,10 +2665,10 @@ pub mod wasi {
                                       values: _rt::Vec::from_raw_parts(l244.cast(), len246, len246),
                                     }
                                                                     };
-                                                                    DbValueNode::Composite(e254)
+                                                                    DbValueNode::Composite(e265)
                                                                 }
                                                                 38 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l247 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -2709,10 +2690,10 @@ pub mod wasi {
                                                                             value: l250 as u32,
                                                                         }
                                                                     };
-                                                                    DbValueNode::Domain(e254)
+                                                                    DbValueNode::Domain(e265)
                                                                 }
                                                                 39 => {
-                                                                    let e254 = {
+                                                                    let e265 = {
                                                                         let l251 = *base
                                                                             .add(8)
                                                                             .cast::<*mut u8>(
@@ -2722,43 +2703,130 @@ pub mod wasi {
                                                                             .cast::<usize>(
                                                                         );
                                                                         let len253 = l252;
+                                                                        let bytes253 = _rt::Vec::from_raw_parts(l251.cast(), len253, len253);
+                                                                        let l254 = i32::from(
+                                                                            *base
+                                                                                .add(16)
+                                                                                .cast::<u8>(),
+                                                                        );
+                                                                        let v257 = match l254 {
+                                                                            0 => {
+                                                                                let e257 = {
+                                                                                    let l255 = *base.add(20).cast::<i32>();
+
+                                                                                    l255 as u32
+                                                                                };
+                                                                                ValueBound::Included(
+                                                                                    e257,
+                                                                                )
+                                                                            }
+                                                                            1 => {
+                                                                                let e257 = {
+                                                                                    let l256 = *base.add(20).cast::<i32>();
+
+                                                                                    l256 as u32
+                                                                                };
+                                                                                ValueBound::Excluded(
+                                                                                    e257,
+                                                                                )
+                                                                            }
+                                                                            n => {
+                                                                                debug_assert_eq!(n, 2, "invalid enum discriminant");
+                                                                                ValueBound::Unbounded
+                                                                            }
+                                                                        };
+                                                                        let l258 = i32::from(
+                                                                            *base
+                                                                                .add(24)
+                                                                                .cast::<u8>(),
+                                                                        );
+                                                                        let v261 = match l258 {
+                                                                            0 => {
+                                                                                let e261 = {
+                                                                                    let l259 = *base.add(28).cast::<i32>();
+
+                                                                                    l259 as u32
+                                                                                };
+                                                                                ValueBound::Included(
+                                                                                    e261,
+                                                                                )
+                                                                            }
+                                                                            1 => {
+                                                                                let e261 = {
+                                                                                    let l260 = *base.add(28).cast::<i32>();
+
+                                                                                    l260 as u32
+                                                                                };
+                                                                                ValueBound::Excluded(
+                                                                                    e261,
+                                                                                )
+                                                                            }
+                                                                            n => {
+                                                                                debug_assert_eq!(n, 2, "invalid enum discriminant");
+                                                                                ValueBound::Unbounded
+                                                                            }
+                                                                        };
+
+                                                                        Range {
+                                                                            name: _rt::string_lift(
+                                                                                bytes253,
+                                                                            ),
+                                                                            value: ValuesRange {
+                                                                                start: v257,
+                                                                                end: v261,
+                                                                            },
+                                                                        }
+                                                                    };
+                                                                    DbValueNode::Range(e265)
+                                                                }
+                                                                40 => {
+                                                                    let e265 = {
+                                                                        let l262 = *base
+                                                                            .add(8)
+                                                                            .cast::<*mut u8>(
+                                                                        );
+                                                                        let l263 = *base
+                                                                            .add(12)
+                                                                            .cast::<usize>(
+                                                                        );
+                                                                        let len264 = l263;
 
                                                                         _rt::Vec::from_raw_parts(
-                                                                            l251.cast(),
-                                                                            len253,
-                                                                            len253,
+                                                                            l262.cast(),
+                                                                            len264,
+                                                                            len264,
                                                                         )
                                                                     };
-                                                                    DbValueNode::Array(e254)
+                                                                    DbValueNode::Array(e265)
                                                                 }
                                                                 n => {
                                                                     debug_assert_eq!(
-                                                                        n, 40,
+                                                                        n, 41,
                                                                         "invalid enum discriminant"
                                                                     );
                                                                     DbValueNode::Null
                                                                 }
                                                             };
 
-                                                            v254
+                                                            v265
                                                         };
-                                                        result255.push(e255);
+                                                        result266.push(e266);
                                                     }
-                                                    _rt::cabi_dealloc(base255, len255 * 56, 8);
+                                                    _rt::cabi_dealloc(base266, len266 * 56, 8);
 
-                                                    DbValue { nodes: result255 }
+                                                    DbValue { nodes: result266 }
                                                 };
-                                                result256.push(e256);
+                                                result267.push(e267);
                                             }
-                                            _rt::cabi_dealloc(base256, len256 * 8, 4);
+                                            _rt::cabi_dealloc(base267, len267 * 8, 4);
 
-                                            DbRow { values: result256 }
+                                            DbRow { values: result267 }
                                         };
-                                        result257.push(e257);
+                                        result268.push(e268);
                                     }
-                                    _rt::cabi_dealloc(base257, len257 * 8, 4);
+                                    _rt::cabi_dealloc(base268, len268 * 8, 4);
 
-                                    result257
+                                    result268
                                 };
                                 Some(e)
                             }
@@ -2903,14 +2971,14 @@ pub mod wasi {
                         let vec0 = statement;
                         let ptr0 = vec0.as_ptr().cast::<u8>();
                         let len0 = vec0.len();
-                        let vec84 = params;
-                        let len84 = vec84.len();
-                        let layout84 =
-                            _rt::alloc::Layout::from_size_align_unchecked(vec84.len() * 8, 4);
-                        let result84 = if layout84.size() != 0 {
-                            let ptr = _rt::alloc::alloc(layout84).cast::<u8>();
+                        let vec87 = params;
+                        let len87 = vec87.len();
+                        let layout87 =
+                            _rt::alloc::Layout::from_size_align_unchecked(vec87.len() * 8, 4);
+                        let result87 = if layout87.size() != 0 {
+                            let ptr = _rt::alloc::alloc(layout87).cast::<u8>();
                             if ptr.is_null() {
-                                _rt::alloc::handle_alloc_error(layout84);
+                                _rt::alloc::handle_alloc_error(layout87);
                             }
                             ptr
                         } else {
@@ -2918,20 +2986,20 @@ pub mod wasi {
                                 ::core::ptr::null_mut()
                             }
                         };
-                        for (i, e) in vec84.into_iter().enumerate() {
-                            let base = result84.add(i * 8);
+                        for (i, e) in vec87.into_iter().enumerate() {
+                            let base = result87.add(i * 8);
                             {
                                 let DbValue { nodes: nodes1 } = e;
-                                let vec83 = nodes1;
-                                let len83 = vec83.len();
-                                let layout83 = _rt::alloc::Layout::from_size_align_unchecked(
-                                    vec83.len() * 56,
+                                let vec86 = nodes1;
+                                let len86 = vec86.len();
+                                let layout86 = _rt::alloc::Layout::from_size_align_unchecked(
+                                    vec86.len() * 56,
                                     8,
                                 );
-                                let result83 = if layout83.size() != 0 {
-                                    let ptr = _rt::alloc::alloc(layout83).cast::<u8>();
+                                let result86 = if layout86.size() != 0 {
+                                    let ptr = _rt::alloc::alloc(layout86).cast::<u8>();
                                     if ptr.is_null() {
-                                        _rt::alloc::handle_alloc_error(layout83);
+                                        _rt::alloc::handle_alloc_error(layout86);
                                     }
                                     ptr
                                 } else {
@@ -2939,8 +3007,8 @@ pub mod wasi {
                                         ::core::ptr::null_mut()
                                     }
                                 };
-                                for (i, e) in vec83.into_iter().enumerate() {
-                                    let base = result83.add(i * 56);
+                                for (i, e) in vec86.into_iter().enumerate() {
+                                    let base = result86.add(i * 56);
                                     {
                                         match e {
                                             DbValueNode::Character(e) => {
@@ -3941,26 +4009,72 @@ pub mod wasi {
                                                 *base.add(8).cast::<*mut u8>() = ptr81.cast_mut();
                                                 *base.add(16).cast::<i32>() = _rt::as_i32(value80);
                                             }
-                                            DbValueNode::Array(e) => {
+                                            DbValueNode::Range(e) => {
                                                 *base.add(0).cast::<u8>() = (39i32) as u8;
-                                                let vec82 = e;
-                                                let ptr82 = vec82.as_ptr().cast::<u8>();
-                                                let len82 = vec82.len();
-                                                *base.add(12).cast::<usize>() = len82;
-                                                *base.add(8).cast::<*mut u8>() = ptr82.cast_mut();
+                                                let Range {
+                                                    name: name82,
+                                                    value: value82,
+                                                } = e;
+                                                let vec83 = name82;
+                                                let ptr83 = vec83.as_ptr().cast::<u8>();
+                                                let len83 = vec83.len();
+                                                *base.add(12).cast::<usize>() = len83;
+                                                *base.add(8).cast::<*mut u8>() = ptr83.cast_mut();
+                                                let ValuesRange {
+                                                    start: start84,
+                                                    end: end84,
+                                                } = value82;
+                                                match start84 {
+                                                    ValueBound::Included(e) => {
+                                                        *base.add(16).cast::<u8>() = (0i32) as u8;
+                                                        *base.add(20).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Excluded(e) => {
+                                                        *base.add(16).cast::<u8>() = (1i32) as u8;
+                                                        *base.add(20).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Unbounded => {
+                                                        *base.add(16).cast::<u8>() = (2i32) as u8;
+                                                    }
+                                                }
+                                                match end84 {
+                                                    ValueBound::Included(e) => {
+                                                        *base.add(24).cast::<u8>() = (0i32) as u8;
+                                                        *base.add(28).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Excluded(e) => {
+                                                        *base.add(24).cast::<u8>() = (1i32) as u8;
+                                                        *base.add(28).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Unbounded => {
+                                                        *base.add(24).cast::<u8>() = (2i32) as u8;
+                                                    }
+                                                }
+                                            }
+                                            DbValueNode::Array(e) => {
+                                                *base.add(0).cast::<u8>() = (40i32) as u8;
+                                                let vec85 = e;
+                                                let ptr85 = vec85.as_ptr().cast::<u8>();
+                                                let len85 = vec85.len();
+                                                *base.add(12).cast::<usize>() = len85;
+                                                *base.add(8).cast::<*mut u8>() = ptr85.cast_mut();
                                             }
                                             DbValueNode::Null => {
-                                                *base.add(0).cast::<u8>() = (40i32) as u8;
+                                                *base.add(0).cast::<u8>() = (41i32) as u8;
                                             }
                                         }
                                     }
                                 }
-                                *base.add(4).cast::<usize>() = len83;
-                                *base.add(0).cast::<*mut u8>() = result83;
-                                cleanup_list.extend_from_slice(&[(result83, layout83)]);
+                                *base.add(4).cast::<usize>() = len86;
+                                *base.add(0).cast::<*mut u8>() = result86;
+                                cleanup_list.extend_from_slice(&[(result86, layout86)]);
                             }
                         }
-                        let ptr85 = ret_area.0.as_mut_ptr().cast::<u8>();
+                        let ptr88 = ret_area.0.as_mut_ptr().cast::<u8>();
                         #[cfg(target_arch = "wasm32")]
                         #[link(wasm_import_module = "wasi:rdbms/postgres@0.0.1")]
                         extern "C" {
@@ -3990,51 +4104,36 @@ pub mod wasi {
                             (self).handle() as i32,
                             ptr0.cast_mut(),
                             len0,
-                            result84,
-                            len84,
-                            ptr85,
+                            result87,
+                            len87,
+                            ptr88,
                         );
-                        let l86 = i32::from(*ptr85.add(0).cast::<u8>());
-                        if layout84.size() != 0 {
-                            _rt::alloc::dealloc(result84.cast(), layout84);
+                        let l89 = i32::from(*ptr88.add(0).cast::<u8>());
+                        if layout87.size() != 0 {
+                            _rt::alloc::dealloc(result87.cast(), layout87);
                         }
                         for (ptr, layout) in cleanup_list {
                             if layout.size() != 0 {
                                 _rt::alloc::dealloc(ptr.cast(), layout);
                             }
                         }
-                        match l86 {
+                        match l89 {
                             0 => {
                                 let e = {
-                                    let l87 = *ptr85.add(4).cast::<i32>();
+                                    let l90 = *ptr88.add(4).cast::<i32>();
 
-                                    DbResultSet::from_handle(l87 as u32)
+                                    DbResultSet::from_handle(l90 as u32)
                                 };
                                 Ok(e)
                             }
                             1 => {
                                 let e = {
-                                    let l88 = i32::from(*ptr85.add(4).cast::<u8>());
-                                    let v104 = match l88 {
+                                    let l91 = i32::from(*ptr88.add(4).cast::<u8>());
+                                    let v107 = match l91 {
                                         0 => {
-                                            let e104 = {
-                                                let l89 = *ptr85.add(8).cast::<*mut u8>();
-                                                let l90 = *ptr85.add(12).cast::<usize>();
-                                                let len91 = l90;
-                                                let bytes91 = _rt::Vec::from_raw_parts(
-                                                    l89.cast(),
-                                                    len91,
-                                                    len91,
-                                                );
-
-                                                _rt::string_lift(bytes91)
-                                            };
-                                            Error::ConnectionFailure(e104)
-                                        }
-                                        1 => {
-                                            let e104 = {
-                                                let l92 = *ptr85.add(8).cast::<*mut u8>();
-                                                let l93 = *ptr85.add(12).cast::<usize>();
+                                            let e107 = {
+                                                let l92 = *ptr88.add(8).cast::<*mut u8>();
+                                                let l93 = *ptr88.add(12).cast::<usize>();
                                                 let len94 = l93;
                                                 let bytes94 = _rt::Vec::from_raw_parts(
                                                     l92.cast(),
@@ -4044,12 +4143,12 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes94)
                                             };
-                                            Error::QueryParameterFailure(e104)
+                                            Error::ConnectionFailure(e107)
                                         }
-                                        2 => {
-                                            let e104 = {
-                                                let l95 = *ptr85.add(8).cast::<*mut u8>();
-                                                let l96 = *ptr85.add(12).cast::<usize>();
+                                        1 => {
+                                            let e107 = {
+                                                let l95 = *ptr88.add(8).cast::<*mut u8>();
+                                                let l96 = *ptr88.add(12).cast::<usize>();
                                                 let len97 = l96;
                                                 let bytes97 = _rt::Vec::from_raw_parts(
                                                     l95.cast(),
@@ -4059,12 +4158,12 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes97)
                                             };
-                                            Error::QueryExecutionFailure(e104)
+                                            Error::QueryParameterFailure(e107)
                                         }
-                                        3 => {
-                                            let e104 = {
-                                                let l98 = *ptr85.add(8).cast::<*mut u8>();
-                                                let l99 = *ptr85.add(12).cast::<usize>();
+                                        2 => {
+                                            let e107 = {
+                                                let l98 = *ptr88.add(8).cast::<*mut u8>();
+                                                let l99 = *ptr88.add(12).cast::<usize>();
                                                 let len100 = l99;
                                                 let bytes100 = _rt::Vec::from_raw_parts(
                                                     l98.cast(),
@@ -4074,13 +4173,12 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes100)
                                             };
-                                            Error::QueryResponseFailure(e104)
+                                            Error::QueryExecutionFailure(e107)
                                         }
-                                        n => {
-                                            debug_assert_eq!(n, 4, "invalid enum discriminant");
-                                            let e104 = {
-                                                let l101 = *ptr85.add(8).cast::<*mut u8>();
-                                                let l102 = *ptr85.add(12).cast::<usize>();
+                                        3 => {
+                                            let e107 = {
+                                                let l101 = *ptr88.add(8).cast::<*mut u8>();
+                                                let l102 = *ptr88.add(12).cast::<usize>();
                                                 let len103 = l102;
                                                 let bytes103 = _rt::Vec::from_raw_parts(
                                                     l101.cast(),
@@ -4090,11 +4188,27 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes103)
                                             };
-                                            Error::Other(e104)
+                                            Error::QueryResponseFailure(e107)
+                                        }
+                                        n => {
+                                            debug_assert_eq!(n, 4, "invalid enum discriminant");
+                                            let e107 = {
+                                                let l104 = *ptr88.add(8).cast::<*mut u8>();
+                                                let l105 = *ptr88.add(12).cast::<usize>();
+                                                let len106 = l105;
+                                                let bytes106 = _rt::Vec::from_raw_parts(
+                                                    l104.cast(),
+                                                    len106,
+                                                    len106,
+                                                );
+
+                                                _rt::string_lift(bytes106)
+                                            };
+                                            Error::Other(e107)
                                         }
                                     };
 
-                                    v104
+                                    v107
                                 };
                                 Err(e)
                             }
@@ -4114,14 +4228,14 @@ pub mod wasi {
                         let vec0 = statement;
                         let ptr0 = vec0.as_ptr().cast::<u8>();
                         let len0 = vec0.len();
-                        let vec84 = params;
-                        let len84 = vec84.len();
-                        let layout84 =
-                            _rt::alloc::Layout::from_size_align_unchecked(vec84.len() * 8, 4);
-                        let result84 = if layout84.size() != 0 {
-                            let ptr = _rt::alloc::alloc(layout84).cast::<u8>();
+                        let vec87 = params;
+                        let len87 = vec87.len();
+                        let layout87 =
+                            _rt::alloc::Layout::from_size_align_unchecked(vec87.len() * 8, 4);
+                        let result87 = if layout87.size() != 0 {
+                            let ptr = _rt::alloc::alloc(layout87).cast::<u8>();
                             if ptr.is_null() {
-                                _rt::alloc::handle_alloc_error(layout84);
+                                _rt::alloc::handle_alloc_error(layout87);
                             }
                             ptr
                         } else {
@@ -4129,20 +4243,20 @@ pub mod wasi {
                                 ::core::ptr::null_mut()
                             }
                         };
-                        for (i, e) in vec84.into_iter().enumerate() {
-                            let base = result84.add(i * 8);
+                        for (i, e) in vec87.into_iter().enumerate() {
+                            let base = result87.add(i * 8);
                             {
                                 let DbValue { nodes: nodes1 } = e;
-                                let vec83 = nodes1;
-                                let len83 = vec83.len();
-                                let layout83 = _rt::alloc::Layout::from_size_align_unchecked(
-                                    vec83.len() * 56,
+                                let vec86 = nodes1;
+                                let len86 = vec86.len();
+                                let layout86 = _rt::alloc::Layout::from_size_align_unchecked(
+                                    vec86.len() * 56,
                                     8,
                                 );
-                                let result83 = if layout83.size() != 0 {
-                                    let ptr = _rt::alloc::alloc(layout83).cast::<u8>();
+                                let result86 = if layout86.size() != 0 {
+                                    let ptr = _rt::alloc::alloc(layout86).cast::<u8>();
                                     if ptr.is_null() {
-                                        _rt::alloc::handle_alloc_error(layout83);
+                                        _rt::alloc::handle_alloc_error(layout86);
                                     }
                                     ptr
                                 } else {
@@ -4150,8 +4264,8 @@ pub mod wasi {
                                         ::core::ptr::null_mut()
                                     }
                                 };
-                                for (i, e) in vec83.into_iter().enumerate() {
-                                    let base = result83.add(i * 56);
+                                for (i, e) in vec86.into_iter().enumerate() {
+                                    let base = result86.add(i * 56);
                                     {
                                         match e {
                                             DbValueNode::Character(e) => {
@@ -5152,26 +5266,72 @@ pub mod wasi {
                                                 *base.add(8).cast::<*mut u8>() = ptr81.cast_mut();
                                                 *base.add(16).cast::<i32>() = _rt::as_i32(value80);
                                             }
-                                            DbValueNode::Array(e) => {
+                                            DbValueNode::Range(e) => {
                                                 *base.add(0).cast::<u8>() = (39i32) as u8;
-                                                let vec82 = e;
-                                                let ptr82 = vec82.as_ptr().cast::<u8>();
-                                                let len82 = vec82.len();
-                                                *base.add(12).cast::<usize>() = len82;
-                                                *base.add(8).cast::<*mut u8>() = ptr82.cast_mut();
+                                                let Range {
+                                                    name: name82,
+                                                    value: value82,
+                                                } = e;
+                                                let vec83 = name82;
+                                                let ptr83 = vec83.as_ptr().cast::<u8>();
+                                                let len83 = vec83.len();
+                                                *base.add(12).cast::<usize>() = len83;
+                                                *base.add(8).cast::<*mut u8>() = ptr83.cast_mut();
+                                                let ValuesRange {
+                                                    start: start84,
+                                                    end: end84,
+                                                } = value82;
+                                                match start84 {
+                                                    ValueBound::Included(e) => {
+                                                        *base.add(16).cast::<u8>() = (0i32) as u8;
+                                                        *base.add(20).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Excluded(e) => {
+                                                        *base.add(16).cast::<u8>() = (1i32) as u8;
+                                                        *base.add(20).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Unbounded => {
+                                                        *base.add(16).cast::<u8>() = (2i32) as u8;
+                                                    }
+                                                }
+                                                match end84 {
+                                                    ValueBound::Included(e) => {
+                                                        *base.add(24).cast::<u8>() = (0i32) as u8;
+                                                        *base.add(28).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Excluded(e) => {
+                                                        *base.add(24).cast::<u8>() = (1i32) as u8;
+                                                        *base.add(28).cast::<i32>() =
+                                                            _rt::as_i32(e);
+                                                    }
+                                                    ValueBound::Unbounded => {
+                                                        *base.add(24).cast::<u8>() = (2i32) as u8;
+                                                    }
+                                                }
+                                            }
+                                            DbValueNode::Array(e) => {
+                                                *base.add(0).cast::<u8>() = (40i32) as u8;
+                                                let vec85 = e;
+                                                let ptr85 = vec85.as_ptr().cast::<u8>();
+                                                let len85 = vec85.len();
+                                                *base.add(12).cast::<usize>() = len85;
+                                                *base.add(8).cast::<*mut u8>() = ptr85.cast_mut();
                                             }
                                             DbValueNode::Null => {
-                                                *base.add(0).cast::<u8>() = (40i32) as u8;
+                                                *base.add(0).cast::<u8>() = (41i32) as u8;
                                             }
                                         }
                                     }
                                 }
-                                *base.add(4).cast::<usize>() = len83;
-                                *base.add(0).cast::<*mut u8>() = result83;
-                                cleanup_list.extend_from_slice(&[(result83, layout83)]);
+                                *base.add(4).cast::<usize>() = len86;
+                                *base.add(0).cast::<*mut u8>() = result86;
+                                cleanup_list.extend_from_slice(&[(result86, layout86)]);
                             }
                         }
-                        let ptr85 = ret_area.0.as_mut_ptr().cast::<u8>();
+                        let ptr88 = ret_area.0.as_mut_ptr().cast::<u8>();
                         #[cfg(target_arch = "wasm32")]
                         #[link(wasm_import_module = "wasi:rdbms/postgres@0.0.1")]
                         extern "C" {
@@ -5201,51 +5361,36 @@ pub mod wasi {
                             (self).handle() as i32,
                             ptr0.cast_mut(),
                             len0,
-                            result84,
-                            len84,
-                            ptr85,
+                            result87,
+                            len87,
+                            ptr88,
                         );
-                        let l86 = i32::from(*ptr85.add(0).cast::<u8>());
-                        if layout84.size() != 0 {
-                            _rt::alloc::dealloc(result84.cast(), layout84);
+                        let l89 = i32::from(*ptr88.add(0).cast::<u8>());
+                        if layout87.size() != 0 {
+                            _rt::alloc::dealloc(result87.cast(), layout87);
                         }
                         for (ptr, layout) in cleanup_list {
                             if layout.size() != 0 {
                                 _rt::alloc::dealloc(ptr.cast(), layout);
                             }
                         }
-                        match l86 {
+                        match l89 {
                             0 => {
                                 let e = {
-                                    let l87 = *ptr85.add(8).cast::<i64>();
+                                    let l90 = *ptr88.add(8).cast::<i64>();
 
-                                    l87 as u64
+                                    l90 as u64
                                 };
                                 Ok(e)
                             }
                             1 => {
                                 let e = {
-                                    let l88 = i32::from(*ptr85.add(8).cast::<u8>());
-                                    let v104 = match l88 {
+                                    let l91 = i32::from(*ptr88.add(8).cast::<u8>());
+                                    let v107 = match l91 {
                                         0 => {
-                                            let e104 = {
-                                                let l89 = *ptr85.add(12).cast::<*mut u8>();
-                                                let l90 = *ptr85.add(16).cast::<usize>();
-                                                let len91 = l90;
-                                                let bytes91 = _rt::Vec::from_raw_parts(
-                                                    l89.cast(),
-                                                    len91,
-                                                    len91,
-                                                );
-
-                                                _rt::string_lift(bytes91)
-                                            };
-                                            Error::ConnectionFailure(e104)
-                                        }
-                                        1 => {
-                                            let e104 = {
-                                                let l92 = *ptr85.add(12).cast::<*mut u8>();
-                                                let l93 = *ptr85.add(16).cast::<usize>();
+                                            let e107 = {
+                                                let l92 = *ptr88.add(12).cast::<*mut u8>();
+                                                let l93 = *ptr88.add(16).cast::<usize>();
                                                 let len94 = l93;
                                                 let bytes94 = _rt::Vec::from_raw_parts(
                                                     l92.cast(),
@@ -5255,12 +5400,12 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes94)
                                             };
-                                            Error::QueryParameterFailure(e104)
+                                            Error::ConnectionFailure(e107)
                                         }
-                                        2 => {
-                                            let e104 = {
-                                                let l95 = *ptr85.add(12).cast::<*mut u8>();
-                                                let l96 = *ptr85.add(16).cast::<usize>();
+                                        1 => {
+                                            let e107 = {
+                                                let l95 = *ptr88.add(12).cast::<*mut u8>();
+                                                let l96 = *ptr88.add(16).cast::<usize>();
                                                 let len97 = l96;
                                                 let bytes97 = _rt::Vec::from_raw_parts(
                                                     l95.cast(),
@@ -5270,12 +5415,12 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes97)
                                             };
-                                            Error::QueryExecutionFailure(e104)
+                                            Error::QueryParameterFailure(e107)
                                         }
-                                        3 => {
-                                            let e104 = {
-                                                let l98 = *ptr85.add(12).cast::<*mut u8>();
-                                                let l99 = *ptr85.add(16).cast::<usize>();
+                                        2 => {
+                                            let e107 = {
+                                                let l98 = *ptr88.add(12).cast::<*mut u8>();
+                                                let l99 = *ptr88.add(16).cast::<usize>();
                                                 let len100 = l99;
                                                 let bytes100 = _rt::Vec::from_raw_parts(
                                                     l98.cast(),
@@ -5285,13 +5430,12 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes100)
                                             };
-                                            Error::QueryResponseFailure(e104)
+                                            Error::QueryExecutionFailure(e107)
                                         }
-                                        n => {
-                                            debug_assert_eq!(n, 4, "invalid enum discriminant");
-                                            let e104 = {
-                                                let l101 = *ptr85.add(12).cast::<*mut u8>();
-                                                let l102 = *ptr85.add(16).cast::<usize>();
+                                        3 => {
+                                            let e107 = {
+                                                let l101 = *ptr88.add(12).cast::<*mut u8>();
+                                                let l102 = *ptr88.add(16).cast::<usize>();
                                                 let len103 = l102;
                                                 let bytes103 = _rt::Vec::from_raw_parts(
                                                     l101.cast(),
@@ -5301,11 +5445,27 @@ pub mod wasi {
 
                                                 _rt::string_lift(bytes103)
                                             };
-                                            Error::Other(e104)
+                                            Error::QueryResponseFailure(e107)
+                                        }
+                                        n => {
+                                            debug_assert_eq!(n, 4, "invalid enum discriminant");
+                                            let e107 = {
+                                                let l104 = *ptr88.add(12).cast::<*mut u8>();
+                                                let l105 = *ptr88.add(16).cast::<usize>();
+                                                let len106 = l105;
+                                                let bytes106 = _rt::Vec::from_raw_parts(
+                                                    l104.cast(),
+                                                    len106,
+                                                    len106,
+                                                );
+
+                                                _rt::string_lift(bytes106)
+                                            };
+                                            Error::Other(e107)
                                         }
                                     };
 
-                                    v104
+                                    v107
                                 };
                                 Err(e)
                             }
@@ -8519,14 +8679,14 @@ pub mod exports {
                                 columns: columns7,
                                 rows: rows7,
                             } = e;
-                            let vec23 = columns7;
-                            let len23 = vec23.len();
-                            let layout23 =
-                                _rt::alloc::Layout::from_size_align_unchecked(vec23.len() * 32, 8);
-                            let result23 = if layout23.size() != 0 {
-                                let ptr = _rt::alloc::alloc(layout23).cast::<u8>();
+                            let vec25 = columns7;
+                            let len25 = vec25.len();
+                            let layout25 =
+                                _rt::alloc::Layout::from_size_align_unchecked(vec25.len() * 32, 8);
+                            let result25 = if layout25.size() != 0 {
+                                let ptr = _rt::alloc::alloc(layout25).cast::<u8>();
                                 if ptr.is_null() {
-                                    _rt::alloc::handle_alloc_error(layout23);
+                                    _rt::alloc::handle_alloc_error(layout25);
                                 }
                                 ptr
                             } else {
@@ -8534,8 +8694,8 @@ pub mod exports {
                                     ::core::ptr::null_mut()
                                 }
                             };
-                            for (i, e) in vec23.into_iter().enumerate() {
-                                let base = result23.add(i * 32);
+                            for (i, e) in vec25.into_iter().enumerate() {
+                                let base = result25.add(i * 32);
                                 {
                                     let super::super::super::super::wasi::rdbms::postgres::DbColumn{ ordinal:ordinal8, name:name8, db_type:db_type8, db_type_name:db_type_name8, } = e;
                                     *base.add(0).cast::<i64>() = _rt::as_i64(ordinal8);
@@ -8546,16 +8706,16 @@ pub mod exports {
                                     *base.add(12).cast::<usize>() = len9;
                                     *base.add(8).cast::<*mut u8>() = ptr9.cast_mut();
                                     let super::super::super::super::wasi::rdbms::postgres::DbColumnType{ nodes:nodes10, } = db_type8;
-                                    let vec21 = nodes10;
-                                    let len21 = vec21.len();
-                                    let layout21 = _rt::alloc::Layout::from_size_align_unchecked(
-                                        vec21.len() * 20,
+                                    let vec23 = nodes10;
+                                    let len23 = vec23.len();
+                                    let layout23 = _rt::alloc::Layout::from_size_align_unchecked(
+                                        vec23.len() * 20,
                                         4,
                                     );
-                                    let result21 = if layout21.size() != 0 {
-                                        let ptr = _rt::alloc::alloc(layout21).cast::<u8>();
+                                    let result23 = if layout23.size() != 0 {
+                                        let ptr = _rt::alloc::alloc(layout23).cast::<u8>();
                                         if ptr.is_null() {
-                                            _rt::alloc::handle_alloc_error(layout21);
+                                            _rt::alloc::handle_alloc_error(layout23);
                                         }
                                         ptr
                                     } else {
@@ -8563,120 +8723,120 @@ pub mod exports {
                                             ::core::ptr::null_mut()
                                         }
                                     };
-                                    for (i, e) in vec21.into_iter().enumerate() {
-                                        let base = result21.add(i * 20);
+                                    for (i, e) in vec23.into_iter().enumerate() {
+                                        let base = result23.add(i * 20);
                                         {
-                                            use super::super::super::super::wasi::rdbms::postgres::DbColumnTypeNode as V20;
+                                            use super::super::super::super::wasi::rdbms::postgres::DbColumnTypeNode as V22;
                                             match e {
-                                                V20::Character => {
+                                                V22::Character => {
                                                     *base.add(0).cast::<u8>() = (0i32) as u8;
                                                 }
-                                                V20::Int2 => {
+                                                V22::Int2 => {
                                                     *base.add(0).cast::<u8>() = (1i32) as u8;
                                                 }
-                                                V20::Int4 => {
+                                                V22::Int4 => {
                                                     *base.add(0).cast::<u8>() = (2i32) as u8;
                                                 }
-                                                V20::Int8 => {
+                                                V22::Int8 => {
                                                     *base.add(0).cast::<u8>() = (3i32) as u8;
                                                 }
-                                                V20::Float4 => {
+                                                V22::Float4 => {
                                                     *base.add(0).cast::<u8>() = (4i32) as u8;
                                                 }
-                                                V20::Float8 => {
+                                                V22::Float8 => {
                                                     *base.add(0).cast::<u8>() = (5i32) as u8;
                                                 }
-                                                V20::Numeric => {
+                                                V22::Numeric => {
                                                     *base.add(0).cast::<u8>() = (6i32) as u8;
                                                 }
-                                                V20::Boolean => {
+                                                V22::Boolean => {
                                                     *base.add(0).cast::<u8>() = (7i32) as u8;
                                                 }
-                                                V20::Text => {
+                                                V22::Text => {
                                                     *base.add(0).cast::<u8>() = (8i32) as u8;
                                                 }
-                                                V20::Varchar => {
+                                                V22::Varchar => {
                                                     *base.add(0).cast::<u8>() = (9i32) as u8;
                                                 }
-                                                V20::Bpchar => {
+                                                V22::Bpchar => {
                                                     *base.add(0).cast::<u8>() = (10i32) as u8;
                                                 }
-                                                V20::Timestamp => {
+                                                V22::Timestamp => {
                                                     *base.add(0).cast::<u8>() = (11i32) as u8;
                                                 }
-                                                V20::Timestamptz => {
+                                                V22::Timestamptz => {
                                                     *base.add(0).cast::<u8>() = (12i32) as u8;
                                                 }
-                                                V20::Date => {
+                                                V22::Date => {
                                                     *base.add(0).cast::<u8>() = (13i32) as u8;
                                                 }
-                                                V20::Time => {
+                                                V22::Time => {
                                                     *base.add(0).cast::<u8>() = (14i32) as u8;
                                                 }
-                                                V20::Timetz => {
+                                                V22::Timetz => {
                                                     *base.add(0).cast::<u8>() = (15i32) as u8;
                                                 }
-                                                V20::Interval => {
+                                                V22::Interval => {
                                                     *base.add(0).cast::<u8>() = (16i32) as u8;
                                                 }
-                                                V20::Bytea => {
+                                                V22::Bytea => {
                                                     *base.add(0).cast::<u8>() = (17i32) as u8;
                                                 }
-                                                V20::Uuid => {
+                                                V22::Uuid => {
                                                     *base.add(0).cast::<u8>() = (18i32) as u8;
                                                 }
-                                                V20::Xml => {
+                                                V22::Xml => {
                                                     *base.add(0).cast::<u8>() = (19i32) as u8;
                                                 }
-                                                V20::Json => {
+                                                V22::Json => {
                                                     *base.add(0).cast::<u8>() = (20i32) as u8;
                                                 }
-                                                V20::Jsonb => {
+                                                V22::Jsonb => {
                                                     *base.add(0).cast::<u8>() = (21i32) as u8;
                                                 }
-                                                V20::Jsonpath => {
+                                                V22::Jsonpath => {
                                                     *base.add(0).cast::<u8>() = (22i32) as u8;
                                                 }
-                                                V20::Inet => {
+                                                V22::Inet => {
                                                     *base.add(0).cast::<u8>() = (23i32) as u8;
                                                 }
-                                                V20::Cidr => {
+                                                V22::Cidr => {
                                                     *base.add(0).cast::<u8>() = (24i32) as u8;
                                                 }
-                                                V20::Macaddr => {
+                                                V22::Macaddr => {
                                                     *base.add(0).cast::<u8>() = (25i32) as u8;
                                                 }
-                                                V20::Bit => {
+                                                V22::Bit => {
                                                     *base.add(0).cast::<u8>() = (26i32) as u8;
                                                 }
-                                                V20::Varbit => {
+                                                V22::Varbit => {
                                                     *base.add(0).cast::<u8>() = (27i32) as u8;
                                                 }
-                                                V20::Int4range => {
+                                                V22::Int4range => {
                                                     *base.add(0).cast::<u8>() = (28i32) as u8;
                                                 }
-                                                V20::Int8range => {
+                                                V22::Int8range => {
                                                     *base.add(0).cast::<u8>() = (29i32) as u8;
                                                 }
-                                                V20::Numrange => {
+                                                V22::Numrange => {
                                                     *base.add(0).cast::<u8>() = (30i32) as u8;
                                                 }
-                                                V20::Tsrange => {
+                                                V22::Tsrange => {
                                                     *base.add(0).cast::<u8>() = (31i32) as u8;
                                                 }
-                                                V20::Tstzrange => {
+                                                V22::Tstzrange => {
                                                     *base.add(0).cast::<u8>() = (32i32) as u8;
                                                 }
-                                                V20::Daterange => {
+                                                V22::Daterange => {
                                                     *base.add(0).cast::<u8>() = (33i32) as u8;
                                                 }
-                                                V20::Money => {
+                                                V22::Money => {
                                                     *base.add(0).cast::<u8>() = (34i32) as u8;
                                                 }
-                                                V20::Oid => {
+                                                V22::Oid => {
                                                     *base.add(0).cast::<u8>() = (35i32) as u8;
                                                 }
-                                                V20::Enumeration(e) => {
+                                                V22::Enumeration(e) => {
                                                     *base.add(0).cast::<u8>() = (36i32) as u8;
                                                     let super::super::super::super::wasi::rdbms::postgres::EnumerationType{ name:name11, } = e;
                                                     let vec12 =
@@ -8688,7 +8848,7 @@ pub mod exports {
                                                     *base.add(4).cast::<*mut u8>() =
                                                         ptr12.cast_mut();
                                                 }
-                                                V20::Composite(e) => {
+                                                V22::Composite(e) => {
                                                     *base.add(0).cast::<u8>() = (37i32) as u8;
                                                     let super::super::super::super::wasi::rdbms::postgres::CompositeType{ name:name13, attributes:attributes13, } = e;
                                                     let vec14 =
@@ -8735,7 +8895,7 @@ pub mod exports {
                                                     *base.add(16).cast::<usize>() = len17;
                                                     *base.add(12).cast::<*mut u8>() = result17;
                                                 }
-                                                V20::Domain(e) => {
+                                                V22::Domain(e) => {
                                                     *base.add(0).cast::<u8>() = (38i32) as u8;
                                                     let super::super::super::super::wasi::rdbms::postgres::DomainType{ name:name18, base_type:base_type18, } = e;
                                                     let vec19 =
@@ -8749,33 +8909,47 @@ pub mod exports {
                                                     *base.add(12).cast::<i32>() =
                                                         _rt::as_i32(base_type18);
                                                 }
-                                                V20::Array(e) => {
+                                                V22::Range(e) => {
                                                     *base.add(0).cast::<u8>() = (39i32) as u8;
+                                                    let super::super::super::super::wasi::rdbms::postgres::RangeType{ name:name20, base_type:base_type20, } = e;
+                                                    let vec21 =
+                                                        (name20.into_bytes()).into_boxed_slice();
+                                                    let ptr21 = vec21.as_ptr().cast::<u8>();
+                                                    let len21 = vec21.len();
+                                                    ::core::mem::forget(vec21);
+                                                    *base.add(8).cast::<usize>() = len21;
+                                                    *base.add(4).cast::<*mut u8>() =
+                                                        ptr21.cast_mut();
+                                                    *base.add(12).cast::<i32>() =
+                                                        _rt::as_i32(base_type20);
+                                                }
+                                                V22::Array(e) => {
+                                                    *base.add(0).cast::<u8>() = (40i32) as u8;
                                                     *base.add(4).cast::<i32>() = _rt::as_i32(e);
                                                 }
                                             }
                                         }
                                     }
-                                    *base.add(20).cast::<usize>() = len21;
-                                    *base.add(16).cast::<*mut u8>() = result21;
-                                    let vec22 = (db_type_name8.into_bytes()).into_boxed_slice();
-                                    let ptr22 = vec22.as_ptr().cast::<u8>();
-                                    let len22 = vec22.len();
-                                    ::core::mem::forget(vec22);
-                                    *base.add(28).cast::<usize>() = len22;
-                                    *base.add(24).cast::<*mut u8>() = ptr22.cast_mut();
+                                    *base.add(20).cast::<usize>() = len23;
+                                    *base.add(16).cast::<*mut u8>() = result23;
+                                    let vec24 = (db_type_name8.into_bytes()).into_boxed_slice();
+                                    let ptr24 = vec24.as_ptr().cast::<u8>();
+                                    let len24 = vec24.len();
+                                    ::core::mem::forget(vec24);
+                                    *base.add(28).cast::<usize>() = len24;
+                                    *base.add(24).cast::<*mut u8>() = ptr24.cast_mut();
                                 }
                             }
-                            *ptr6.add(8).cast::<usize>() = len23;
-                            *ptr6.add(4).cast::<*mut u8>() = result23;
-                            let vec124 = rows7;
-                            let len124 = vec124.len();
-                            let layout124 =
-                                _rt::alloc::Layout::from_size_align_unchecked(vec124.len() * 8, 4);
-                            let result124 = if layout124.size() != 0 {
-                                let ptr = _rt::alloc::alloc(layout124).cast::<u8>();
+                            *ptr6.add(8).cast::<usize>() = len25;
+                            *ptr6.add(4).cast::<*mut u8>() = result25;
+                            let vec131 = rows7;
+                            let len131 = vec131.len();
+                            let layout131 =
+                                _rt::alloc::Layout::from_size_align_unchecked(vec131.len() * 8, 4);
+                            let result131 = if layout131.size() != 0 {
+                                let ptr = _rt::alloc::alloc(layout131).cast::<u8>();
                                 if ptr.is_null() {
-                                    _rt::alloc::handle_alloc_error(layout124);
+                                    _rt::alloc::handle_alloc_error(layout131);
                                 }
                                 ptr
                             } else {
@@ -8783,22 +8957,22 @@ pub mod exports {
                                     ::core::ptr::null_mut()
                                 }
                             };
-                            for (i, e) in vec124.into_iter().enumerate() {
-                                let base = result124.add(i * 8);
+                            for (i, e) in vec131.into_iter().enumerate() {
+                                let base = result131.add(i * 8);
                                 {
                                     let super::super::super::super::wasi::rdbms::postgres::DbRow {
-                                        values: values24,
+                                        values: values26,
                                     } = e;
-                                    let vec123 = values24;
-                                    let len123 = vec123.len();
-                                    let layout123 = _rt::alloc::Layout::from_size_align_unchecked(
-                                        vec123.len() * 8,
+                                    let vec130 = values26;
+                                    let len130 = vec130.len();
+                                    let layout130 = _rt::alloc::Layout::from_size_align_unchecked(
+                                        vec130.len() * 8,
                                         4,
                                     );
-                                    let result123 = if layout123.size() != 0 {
-                                        let ptr = _rt::alloc::alloc(layout123).cast::<u8>();
+                                    let result130 = if layout130.size() != 0 {
+                                        let ptr = _rt::alloc::alloc(layout130).cast::<u8>();
                                         if ptr.is_null() {
-                                            _rt::alloc::handle_alloc_error(layout123);
+                                            _rt::alloc::handle_alloc_error(layout130);
                                         }
                                         ptr
                                     } else {
@@ -8806,21 +8980,21 @@ pub mod exports {
                                             ::core::ptr::null_mut()
                                         }
                                     };
-                                    for (i, e) in vec123.into_iter().enumerate() {
-                                        let base = result123.add(i * 8);
+                                    for (i, e) in vec130.into_iter().enumerate() {
+                                        let base = result130.add(i * 8);
                                         {
-                                            let super::super::super::super::wasi::rdbms::postgres::DbValue{ nodes:nodes25, } = e;
-                                            let vec122 = nodes25;
-                                            let len122 = vec122.len();
-                                            let layout122 =
+                                            let super::super::super::super::wasi::rdbms::postgres::DbValue{ nodes:nodes27, } = e;
+                                            let vec129 = nodes27;
+                                            let len129 = vec129.len();
+                                            let layout129 =
                                                 _rt::alloc::Layout::from_size_align_unchecked(
-                                                    vec122.len() * 56,
+                                                    vec129.len() * 56,
                                                     8,
                                                 );
-                                            let result122 = if layout122.size() != 0 {
-                                                let ptr = _rt::alloc::alloc(layout122).cast::<u8>();
+                                            let result129 = if layout129.size() != 0 {
+                                                let ptr = _rt::alloc::alloc(layout129).cast::<u8>();
                                                 if ptr.is_null() {
-                                                    _rt::alloc::handle_alloc_error(layout122);
+                                                    _rt::alloc::handle_alloc_error(layout129);
                                                 }
                                                 ptr
                                             } else {
@@ -8828,83 +9002,50 @@ pub mod exports {
                                                     ::core::ptr::null_mut()
                                                 }
                                             };
-                                            for (i, e) in vec122.into_iter().enumerate() {
-                                                let base = result122.add(i * 56);
+                                            for (i, e) in vec129.into_iter().enumerate() {
+                                                let base = result129.add(i * 56);
                                                 {
-                                                    use super::super::super::super::wasi::rdbms::postgres::DbValueNode as V121;
+                                                    use super::super::super::super::wasi::rdbms::postgres::DbValueNode as V128;
                                                     match e {
-                                                        V121::Character(e) => {
+                                                        V128::Character(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (0i32) as u8;
                                                             *base.add(8).cast::<u8>() =
                                                                 (_rt::as_i32(e)) as u8;
                                                         }
-                                                        V121::Int2(e) => {
+                                                        V128::Int2(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (1i32) as u8;
                                                             *base.add(8).cast::<u16>() =
                                                                 (_rt::as_i32(e)) as u16;
                                                         }
-                                                        V121::Int4(e) => {
+                                                        V128::Int4(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (2i32) as u8;
                                                             *base.add(8).cast::<i32>() =
                                                                 _rt::as_i32(e);
                                                         }
-                                                        V121::Int8(e) => {
+                                                        V128::Int8(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (3i32) as u8;
                                                             *base.add(8).cast::<i64>() =
                                                                 _rt::as_i64(e);
                                                         }
-                                                        V121::Float4(e) => {
+                                                        V128::Float4(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (4i32) as u8;
                                                             *base.add(8).cast::<f32>() =
                                                                 _rt::as_f32(e);
                                                         }
-                                                        V121::Float8(e) => {
+                                                        V128::Float8(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (5i32) as u8;
                                                             *base.add(8).cast::<f64>() =
                                                                 _rt::as_f64(e);
                                                         }
-                                                        V121::Numeric(e) => {
+                                                        V128::Numeric(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (6i32) as u8;
-                                                            let vec26 =
-                                                                (e.into_bytes()).into_boxed_slice();
-                                                            let ptr26 = vec26.as_ptr().cast::<u8>();
-                                                            let len26 = vec26.len();
-                                                            ::core::mem::forget(vec26);
-                                                            *base.add(12).cast::<usize>() = len26;
-                                                            *base.add(8).cast::<*mut u8>() =
-                                                                ptr26.cast_mut();
-                                                        }
-                                                        V121::Boolean(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (7i32) as u8;
-                                                            *base.add(8).cast::<u8>() = (match e {
-                                                                true => 1,
-                                                                false => 0,
-                                                            })
-                                                                as u8;
-                                                        }
-                                                        V121::Text(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (8i32) as u8;
-                                                            let vec27 =
-                                                                (e.into_bytes()).into_boxed_slice();
-                                                            let ptr27 = vec27.as_ptr().cast::<u8>();
-                                                            let len27 = vec27.len();
-                                                            ::core::mem::forget(vec27);
-                                                            *base.add(12).cast::<usize>() = len27;
-                                                            *base.add(8).cast::<*mut u8>() =
-                                                                ptr27.cast_mut();
-                                                        }
-                                                        V121::Varchar(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (9i32) as u8;
                                                             let vec28 =
                                                                 (e.into_bytes()).into_boxed_slice();
                                                             let ptr28 = vec28.as_ptr().cast::<u8>();
@@ -8914,9 +9055,18 @@ pub mod exports {
                                                             *base.add(8).cast::<*mut u8>() =
                                                                 ptr28.cast_mut();
                                                         }
-                                                        V121::Bpchar(e) => {
+                                                        V128::Boolean(e) => {
                                                             *base.add(0).cast::<u8>() =
-                                                                (10i32) as u8;
+                                                                (7i32) as u8;
+                                                            *base.add(8).cast::<u8>() = (match e {
+                                                                true => 1,
+                                                                false => 0,
+                                                            })
+                                                                as u8;
+                                                        }
+                                                        V128::Text(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (8i32) as u8;
                                                             let vec29 =
                                                                 (e.into_bytes()).into_boxed_slice();
                                                             let ptr29 = vec29.as_ptr().cast::<u8>();
@@ -8926,80 +9076,90 @@ pub mod exports {
                                                             *base.add(8).cast::<*mut u8>() =
                                                                 ptr29.cast_mut();
                                                         }
-                                                        V121::Timestamp(e) => {
+                                                        V128::Varchar(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (9i32) as u8;
+                                                            let vec30 =
+                                                                (e.into_bytes()).into_boxed_slice();
+                                                            let ptr30 = vec30.as_ptr().cast::<u8>();
+                                                            let len30 = vec30.len();
+                                                            ::core::mem::forget(vec30);
+                                                            *base.add(12).cast::<usize>() = len30;
+                                                            *base.add(8).cast::<*mut u8>() =
+                                                                ptr30.cast_mut();
+                                                        }
+                                                        V128::Bpchar(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (10i32) as u8;
+                                                            let vec31 =
+                                                                (e.into_bytes()).into_boxed_slice();
+                                                            let ptr31 = vec31.as_ptr().cast::<u8>();
+                                                            let len31 = vec31.len();
+                                                            ::core::mem::forget(vec31);
+                                                            *base.add(12).cast::<usize>() = len31;
+                                                            *base.add(8).cast::<*mut u8>() =
+                                                                ptr31.cast_mut();
+                                                        }
+                                                        V128::Timestamp(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (11i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date30, time:time30, } = e;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Date{ year:year31, month:month31, day:day31, } = date30;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date32, time:time32, } = e;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Date{ year:year33, month:month33, day:day33, } = date32;
                                                             *base.add(8).cast::<i32>() =
-                                                                _rt::as_i32(year31);
+                                                                _rt::as_i32(year33);
                                                             *base.add(12).cast::<u8>() =
-                                                                (_rt::as_i32(month31)) as u8;
+                                                                (_rt::as_i32(month33)) as u8;
                                                             *base.add(13).cast::<u8>() =
-                                                                (_rt::as_i32(day31)) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour32, minute:minute32, second:second32, nanosecond:nanosecond32, } = time30;
+                                                                (_rt::as_i32(day33)) as u8;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour34, minute:minute34, second:second34, nanosecond:nanosecond34, } = time32;
                                                             *base.add(16).cast::<u8>() =
-                                                                (_rt::as_i32(hour32)) as u8;
+                                                                (_rt::as_i32(hour34)) as u8;
                                                             *base.add(17).cast::<u8>() =
-                                                                (_rt::as_i32(minute32)) as u8;
+                                                                (_rt::as_i32(minute34)) as u8;
                                                             *base.add(18).cast::<u8>() =
-                                                                (_rt::as_i32(second32)) as u8;
+                                                                (_rt::as_i32(second34)) as u8;
                                                             *base.add(20).cast::<i32>() =
-                                                                _rt::as_i32(nanosecond32);
+                                                                _rt::as_i32(nanosecond34);
                                                         }
-                                                        V121::Timestamptz(e) => {
+                                                        V128::Timestamptz(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (12i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp33, offset:offset33, } = e;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date34, time:time34, } = timestamp33;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Date{ year:year35, month:month35, day:day35, } = date34;
-                                                            *base.add(8).cast::<i32>() =
-                                                                _rt::as_i32(year35);
-                                                            *base.add(12).cast::<u8>() =
-                                                                (_rt::as_i32(month35)) as u8;
-                                                            *base.add(13).cast::<u8>() =
-                                                                (_rt::as_i32(day35)) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour36, minute:minute36, second:second36, nanosecond:nanosecond36, } = time34;
-                                                            *base.add(16).cast::<u8>() =
-                                                                (_rt::as_i32(hour36)) as u8;
-                                                            *base.add(17).cast::<u8>() =
-                                                                (_rt::as_i32(minute36)) as u8;
-                                                            *base.add(18).cast::<u8>() =
-                                                                (_rt::as_i32(second36)) as u8;
-                                                            *base.add(20).cast::<i32>() =
-                                                                _rt::as_i32(nanosecond36);
-                                                            *base.add(24).cast::<i32>() =
-                                                                _rt::as_i32(offset33);
-                                                        }
-                                                        V121::Date(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (13i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Date{ year:year37, month:month37, day:day37, } = e;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp35, offset:offset35, } = e;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date36, time:time36, } = timestamp35;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Date{ year:year37, month:month37, day:day37, } = date36;
                                                             *base.add(8).cast::<i32>() =
                                                                 _rt::as_i32(year37);
                                                             *base.add(12).cast::<u8>() =
                                                                 (_rt::as_i32(month37)) as u8;
                                                             *base.add(13).cast::<u8>() =
                                                                 (_rt::as_i32(day37)) as u8;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour38, minute:minute38, second:second38, nanosecond:nanosecond38, } = time36;
+                                                            *base.add(16).cast::<u8>() =
+                                                                (_rt::as_i32(hour38)) as u8;
+                                                            *base.add(17).cast::<u8>() =
+                                                                (_rt::as_i32(minute38)) as u8;
+                                                            *base.add(18).cast::<u8>() =
+                                                                (_rt::as_i32(second38)) as u8;
+                                                            *base.add(20).cast::<i32>() =
+                                                                _rt::as_i32(nanosecond38);
+                                                            *base.add(24).cast::<i32>() =
+                                                                _rt::as_i32(offset35);
                                                         }
-                                                        V121::Time(e) => {
+                                                        V128::Date(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (13i32) as u8;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Date{ year:year39, month:month39, day:day39, } = e;
+                                                            *base.add(8).cast::<i32>() =
+                                                                _rt::as_i32(year39);
+                                                            *base.add(12).cast::<u8>() =
+                                                                (_rt::as_i32(month39)) as u8;
+                                                            *base.add(13).cast::<u8>() =
+                                                                (_rt::as_i32(day39)) as u8;
+                                                        }
+                                                        V128::Time(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (14i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour38, minute:minute38, second:second38, nanosecond:nanosecond38, } = e;
-                                                            *base.add(8).cast::<u8>() =
-                                                                (_rt::as_i32(hour38)) as u8;
-                                                            *base.add(9).cast::<u8>() =
-                                                                (_rt::as_i32(minute38)) as u8;
-                                                            *base.add(10).cast::<u8>() =
-                                                                (_rt::as_i32(second38)) as u8;
-                                                            *base.add(12).cast::<i32>() =
-                                                                _rt::as_i32(nanosecond38);
-                                                        }
-                                                        V121::Timetz(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (15i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Timetz{ time:time39, offset:offset39, } = e;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour40, minute:minute40, second:second40, nanosecond:nanosecond40, } = time39;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour40, minute:minute40, second:second40, nanosecond:nanosecond40, } = e;
                                                             *base.add(8).cast::<u8>() =
                                                                 (_rt::as_i32(hour40)) as u8;
                                                             *base.add(9).cast::<u8>() =
@@ -9008,48 +9168,38 @@ pub mod exports {
                                                                 (_rt::as_i32(second40)) as u8;
                                                             *base.add(12).cast::<i32>() =
                                                                 _rt::as_i32(nanosecond40);
-                                                            *base.add(16).cast::<i32>() =
-                                                                _rt::as_i32(offset39);
                                                         }
-                                                        V121::Interval(e) => {
+                                                        V128::Timetz(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (15i32) as u8;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Timetz{ time:time41, offset:offset41, } = e;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour42, minute:minute42, second:second42, nanosecond:nanosecond42, } = time41;
+                                                            *base.add(8).cast::<u8>() =
+                                                                (_rt::as_i32(hour42)) as u8;
+                                                            *base.add(9).cast::<u8>() =
+                                                                (_rt::as_i32(minute42)) as u8;
+                                                            *base.add(10).cast::<u8>() =
+                                                                (_rt::as_i32(second42)) as u8;
+                                                            *base.add(12).cast::<i32>() =
+                                                                _rt::as_i32(nanosecond42);
+                                                            *base.add(16).cast::<i32>() =
+                                                                _rt::as_i32(offset41);
+                                                        }
+                                                        V128::Interval(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (16i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Interval{ months:months41, days:days41, microseconds:microseconds41, } = e;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Interval{ months:months43, days:days43, microseconds:microseconds43, } = e;
                                                             *base.add(8).cast::<i32>() =
-                                                                _rt::as_i32(months41);
+                                                                _rt::as_i32(months43);
                                                             *base.add(12).cast::<i32>() =
-                                                                _rt::as_i32(days41);
+                                                                _rt::as_i32(days43);
                                                             *base.add(16).cast::<i64>() =
-                                                                _rt::as_i64(microseconds41);
+                                                                _rt::as_i64(microseconds43);
                                                         }
-                                                        V121::Bytea(e) => {
+                                                        V128::Bytea(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (17i32) as u8;
-                                                            let vec42 = (e).into_boxed_slice();
-                                                            let ptr42 = vec42.as_ptr().cast::<u8>();
-                                                            let len42 = vec42.len();
-                                                            ::core::mem::forget(vec42);
-                                                            *base.add(12).cast::<usize>() = len42;
-                                                            *base.add(8).cast::<*mut u8>() =
-                                                                ptr42.cast_mut();
-                                                        }
-                                                        V121::Json(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (18i32) as u8;
-                                                            let vec43 =
-                                                                (e.into_bytes()).into_boxed_slice();
-                                                            let ptr43 = vec43.as_ptr().cast::<u8>();
-                                                            let len43 = vec43.len();
-                                                            ::core::mem::forget(vec43);
-                                                            *base.add(12).cast::<usize>() = len43;
-                                                            *base.add(8).cast::<*mut u8>() =
-                                                                ptr43.cast_mut();
-                                                        }
-                                                        V121::Jsonb(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (19i32) as u8;
-                                                            let vec44 =
-                                                                (e.into_bytes()).into_boxed_slice();
+                                                            let vec44 = (e).into_boxed_slice();
                                                             let ptr44 = vec44.as_ptr().cast::<u8>();
                                                             let len44 = vec44.len();
                                                             ::core::mem::forget(vec44);
@@ -9057,9 +9207,9 @@ pub mod exports {
                                                             *base.add(8).cast::<*mut u8>() =
                                                                 ptr44.cast_mut();
                                                         }
-                                                        V121::Jsonpath(e) => {
+                                                        V128::Json(e) => {
                                                             *base.add(0).cast::<u8>() =
-                                                                (20i32) as u8;
+                                                                (18i32) as u8;
                                                             let vec45 =
                                                                 (e.into_bytes()).into_boxed_slice();
                                                             let ptr45 = vec45.as_ptr().cast::<u8>();
@@ -9069,9 +9219,9 @@ pub mod exports {
                                                             *base.add(8).cast::<*mut u8>() =
                                                                 ptr45.cast_mut();
                                                         }
-                                                        V121::Xml(e) => {
+                                                        V128::Jsonb(e) => {
                                                             *base.add(0).cast::<u8>() =
-                                                                (21i32) as u8;
+                                                                (19i32) as u8;
                                                             let vec46 =
                                                                 (e.into_bytes()).into_boxed_slice();
                                                             let ptr46 = vec46.as_ptr().cast::<u8>();
@@ -9081,163 +9231,187 @@ pub mod exports {
                                                             *base.add(8).cast::<*mut u8>() =
                                                                 ptr46.cast_mut();
                                                         }
-                                                        V121::Uuid(e) => {
+                                                        V128::Jsonpath(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (20i32) as u8;
+                                                            let vec47 =
+                                                                (e.into_bytes()).into_boxed_slice();
+                                                            let ptr47 = vec47.as_ptr().cast::<u8>();
+                                                            let len47 = vec47.len();
+                                                            ::core::mem::forget(vec47);
+                                                            *base.add(12).cast::<usize>() = len47;
+                                                            *base.add(8).cast::<*mut u8>() =
+                                                                ptr47.cast_mut();
+                                                        }
+                                                        V128::Xml(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (21i32) as u8;
+                                                            let vec48 =
+                                                                (e.into_bytes()).into_boxed_slice();
+                                                            let ptr48 = vec48.as_ptr().cast::<u8>();
+                                                            let len48 = vec48.len();
+                                                            ::core::mem::forget(vec48);
+                                                            *base.add(12).cast::<usize>() = len48;
+                                                            *base.add(8).cast::<*mut u8>() =
+                                                                ptr48.cast_mut();
+                                                        }
+                                                        V128::Uuid(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (22i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Uuid{ high_bits:high_bits47, low_bits:low_bits47, } = e;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Uuid{ high_bits:high_bits49, low_bits:low_bits49, } = e;
                                                             *base.add(8).cast::<i64>() =
-                                                                _rt::as_i64(high_bits47);
+                                                                _rt::as_i64(high_bits49);
                                                             *base.add(16).cast::<i64>() =
-                                                                _rt::as_i64(low_bits47);
+                                                                _rt::as_i64(low_bits49);
                                                         }
-                                                        V121::Inet(e) => {
+                                                        V128::Inet(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (23i32) as u8;
-                                                            use super::super::super::super::wasi::rdbms::postgres::IpAddress as V50;
+                                                            use super::super::super::super::wasi::rdbms::postgres::IpAddress as V52;
                                                             match e {
-                                                                V50::Ipv4(e) => {
+                                                                V52::Ipv4(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (0i32) as u8;
                                                                     let (
-                                                                        t48_0,
-                                                                        t48_1,
-                                                                        t48_2,
-                                                                        t48_3,
+                                                                        t50_0,
+                                                                        t50_1,
+                                                                        t50_2,
+                                                                        t50_3,
                                                                     ) = e;
                                                                     *base.add(10).cast::<u8>() =
-                                                                        (_rt::as_i32(t48_0)) as u8;
+                                                                        (_rt::as_i32(t50_0)) as u8;
                                                                     *base.add(11).cast::<u8>() =
-                                                                        (_rt::as_i32(t48_1)) as u8;
+                                                                        (_rt::as_i32(t50_1)) as u8;
                                                                     *base.add(12).cast::<u8>() =
-                                                                        (_rt::as_i32(t48_2)) as u8;
+                                                                        (_rt::as_i32(t50_2)) as u8;
                                                                     *base.add(13).cast::<u8>() =
-                                                                        (_rt::as_i32(t48_3)) as u8;
+                                                                        (_rt::as_i32(t50_3)) as u8;
                                                                 }
-                                                                V50::Ipv6(e) => {
+                                                                V52::Ipv6(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let (
-                                                                        t49_0,
-                                                                        t49_1,
-                                                                        t49_2,
-                                                                        t49_3,
-                                                                        t49_4,
-                                                                        t49_5,
-                                                                        t49_6,
-                                                                        t49_7,
-                                                                    ) = e;
-                                                                    *base.add(10).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_0)) as u16;
-                                                                    *base.add(12).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_1)) as u16;
-                                                                    *base.add(14).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_2)) as u16;
-                                                                    *base.add(16).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_3)) as u16;
-                                                                    *base.add(18).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_4)) as u16;
-                                                                    *base.add(20).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_5)) as u16;
-                                                                    *base.add(22).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_6)) as u16;
-                                                                    *base.add(24).cast::<u16>() =
-                                                                        (_rt::as_i32(t49_7)) as u16;
-                                                                }
-                                                            }
-                                                        }
-                                                        V121::Cidr(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (24i32) as u8;
-                                                            use super::super::super::super::wasi::rdbms::postgres::IpAddress as V53;
-                                                            match e {
-                                                                V53::Ipv4(e) => {
-                                                                    *base.add(8).cast::<u8>() =
-                                                                        (0i32) as u8;
                                                                     let (
                                                                         t51_0,
                                                                         t51_1,
                                                                         t51_2,
                                                                         t51_3,
+                                                                        t51_4,
+                                                                        t51_5,
+                                                                        t51_6,
+                                                                        t51_7,
+                                                                    ) = e;
+                                                                    *base.add(10).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_0)) as u16;
+                                                                    *base.add(12).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_1)) as u16;
+                                                                    *base.add(14).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_2)) as u16;
+                                                                    *base.add(16).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_3)) as u16;
+                                                                    *base.add(18).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_4)) as u16;
+                                                                    *base.add(20).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_5)) as u16;
+                                                                    *base.add(22).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_6)) as u16;
+                                                                    *base.add(24).cast::<u16>() =
+                                                                        (_rt::as_i32(t51_7)) as u16;
+                                                                }
+                                                            }
+                                                        }
+                                                        V128::Cidr(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (24i32) as u8;
+                                                            use super::super::super::super::wasi::rdbms::postgres::IpAddress as V55;
+                                                            match e {
+                                                                V55::Ipv4(e) => {
+                                                                    *base.add(8).cast::<u8>() =
+                                                                        (0i32) as u8;
+                                                                    let (
+                                                                        t53_0,
+                                                                        t53_1,
+                                                                        t53_2,
+                                                                        t53_3,
                                                                     ) = e;
                                                                     *base.add(10).cast::<u8>() =
-                                                                        (_rt::as_i32(t51_0)) as u8;
+                                                                        (_rt::as_i32(t53_0)) as u8;
                                                                     *base.add(11).cast::<u8>() =
-                                                                        (_rt::as_i32(t51_1)) as u8;
+                                                                        (_rt::as_i32(t53_1)) as u8;
                                                                     *base.add(12).cast::<u8>() =
-                                                                        (_rt::as_i32(t51_2)) as u8;
+                                                                        (_rt::as_i32(t53_2)) as u8;
                                                                     *base.add(13).cast::<u8>() =
-                                                                        (_rt::as_i32(t51_3)) as u8;
+                                                                        (_rt::as_i32(t53_3)) as u8;
                                                                 }
-                                                                V53::Ipv6(e) => {
+                                                                V55::Ipv6(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
                                                                     let (
-                                                                        t52_0,
-                                                                        t52_1,
-                                                                        t52_2,
-                                                                        t52_3,
-                                                                        t52_4,
-                                                                        t52_5,
-                                                                        t52_6,
-                                                                        t52_7,
+                                                                        t54_0,
+                                                                        t54_1,
+                                                                        t54_2,
+                                                                        t54_3,
+                                                                        t54_4,
+                                                                        t54_5,
+                                                                        t54_6,
+                                                                        t54_7,
                                                                     ) = e;
                                                                     *base.add(10).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_0)) as u16;
+                                                                        (_rt::as_i32(t54_0)) as u16;
                                                                     *base.add(12).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_1)) as u16;
+                                                                        (_rt::as_i32(t54_1)) as u16;
                                                                     *base.add(14).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_2)) as u16;
+                                                                        (_rt::as_i32(t54_2)) as u16;
                                                                     *base.add(16).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_3)) as u16;
+                                                                        (_rt::as_i32(t54_3)) as u16;
                                                                     *base.add(18).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_4)) as u16;
+                                                                        (_rt::as_i32(t54_4)) as u16;
                                                                     *base.add(20).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_5)) as u16;
+                                                                        (_rt::as_i32(t54_5)) as u16;
                                                                     *base.add(22).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_6)) as u16;
+                                                                        (_rt::as_i32(t54_6)) as u16;
                                                                     *base.add(24).cast::<u16>() =
-                                                                        (_rt::as_i32(t52_7)) as u16;
+                                                                        (_rt::as_i32(t54_7)) as u16;
                                                                 }
                                                             }
                                                         }
-                                                        V121::Macaddr(e) => {
+                                                        V128::Macaddr(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (25i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::MacAddress{ octets:octets54, } = e;
+                                                            let super::super::super::super::wasi::rdbms::postgres::MacAddress{ octets:octets56, } = e;
                                                             let (
-                                                                t55_0,
-                                                                t55_1,
-                                                                t55_2,
-                                                                t55_3,
-                                                                t55_4,
-                                                                t55_5,
-                                                            ) = octets54;
+                                                                t57_0,
+                                                                t57_1,
+                                                                t57_2,
+                                                                t57_3,
+                                                                t57_4,
+                                                                t57_5,
+                                                            ) = octets56;
                                                             *base.add(8).cast::<u8>() =
-                                                                (_rt::as_i32(t55_0)) as u8;
+                                                                (_rt::as_i32(t57_0)) as u8;
                                                             *base.add(9).cast::<u8>() =
-                                                                (_rt::as_i32(t55_1)) as u8;
+                                                                (_rt::as_i32(t57_1)) as u8;
                                                             *base.add(10).cast::<u8>() =
-                                                                (_rt::as_i32(t55_2)) as u8;
+                                                                (_rt::as_i32(t57_2)) as u8;
                                                             *base.add(11).cast::<u8>() =
-                                                                (_rt::as_i32(t55_3)) as u8;
+                                                                (_rt::as_i32(t57_3)) as u8;
                                                             *base.add(12).cast::<u8>() =
-                                                                (_rt::as_i32(t55_4)) as u8;
+                                                                (_rt::as_i32(t57_4)) as u8;
                                                             *base.add(13).cast::<u8>() =
-                                                                (_rt::as_i32(t55_5)) as u8;
+                                                                (_rt::as_i32(t57_5)) as u8;
                                                         }
-                                                        V121::Bit(e) => {
+                                                        V128::Bit(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (26i32) as u8;
-                                                            let vec56 = e;
-                                                            let len56 = vec56.len();
-                                                            let layout56 = _rt::alloc::Layout::from_size_align_unchecked(vec56.len() * 1, 1);
-                                                            let result56 = if layout56.size() != 0 {
+                                                            let vec58 = e;
+                                                            let len58 = vec58.len();
+                                                            let layout58 = _rt::alloc::Layout::from_size_align_unchecked(vec58.len() * 1, 1);
+                                                            let result58 = if layout58.size() != 0 {
                                                                 let ptr =
-                                                                    _rt::alloc::alloc(layout56)
+                                                                    _rt::alloc::alloc(layout58)
                                                                         .cast::<u8>();
                                                                 if ptr.is_null() {
                                                                     _rt::alloc::handle_alloc_error(
-                                                                        layout56,
+                                                                        layout58,
                                                                     );
                                                                 }
                                                                 ptr
@@ -9247,9 +9421,9 @@ pub mod exports {
                                                                 }
                                                             };
                                                             for (i, e) in
-                                                                vec56.into_iter().enumerate()
+                                                                vec58.into_iter().enumerate()
                                                             {
-                                                                let base = result56.add(i * 1);
+                                                                let base = result58.add(i * 1);
                                                                 {
                                                                     *base.add(0).cast::<u8>() =
                                                                         (match e {
@@ -9259,23 +9433,23 @@ pub mod exports {
                                                                             as u8;
                                                                 }
                                                             }
-                                                            *base.add(12).cast::<usize>() = len56;
+                                                            *base.add(12).cast::<usize>() = len58;
                                                             *base.add(8).cast::<*mut u8>() =
-                                                                result56;
+                                                                result58;
                                                         }
-                                                        V121::Varbit(e) => {
+                                                        V128::Varbit(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (27i32) as u8;
-                                                            let vec57 = e;
-                                                            let len57 = vec57.len();
-                                                            let layout57 = _rt::alloc::Layout::from_size_align_unchecked(vec57.len() * 1, 1);
-                                                            let result57 = if layout57.size() != 0 {
+                                                            let vec59 = e;
+                                                            let len59 = vec59.len();
+                                                            let layout59 = _rt::alloc::Layout::from_size_align_unchecked(vec59.len() * 1, 1);
+                                                            let result59 = if layout59.size() != 0 {
                                                                 let ptr =
-                                                                    _rt::alloc::alloc(layout57)
+                                                                    _rt::alloc::alloc(layout59)
                                                                         .cast::<u8>();
                                                                 if ptr.is_null() {
                                                                     _rt::alloc::handle_alloc_error(
-                                                                        layout57,
+                                                                        layout59,
                                                                     );
                                                                 }
                                                                 ptr
@@ -9285,9 +9459,9 @@ pub mod exports {
                                                                 }
                                                             };
                                                             for (i, e) in
-                                                                vec57.into_iter().enumerate()
+                                                                vec59.into_iter().enumerate()
                                                             {
-                                                                let base = result57.add(i * 1);
+                                                                let base = result59.add(i * 1);
                                                                 {
                                                                     *base.add(0).cast::<u8>() =
                                                                         (match e {
@@ -9297,601 +9471,655 @@ pub mod exports {
                                                                             as u8;
                                                                 }
                                                             }
-                                                            *base.add(12).cast::<usize>() = len57;
+                                                            *base.add(12).cast::<usize>() = len59;
                                                             *base.add(8).cast::<*mut u8>() =
-                                                                result57;
+                                                                result59;
                                                         }
-                                                        V121::Int4range(e) => {
+                                                        V128::Int4range(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (28i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Int4range{ start:start58, end:end58, } = e;
-                                                            use super::super::super::super::wasi::rdbms::postgres::Int4bound as V59;
-                                                            match start58 {
-                                                                V59::Included(e) => {
+                                                            let super::super::super::super::wasi::rdbms::postgres::Int4range{ start:start60, end:end60, } = e;
+                                                            use super::super::super::super::wasi::rdbms::postgres::Int4bound as V61;
+                                                            match start60 {
+                                                                V61::Included(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (0i32) as u8;
                                                                     *base.add(12).cast::<i32>() =
                                                                         _rt::as_i32(e);
                                                                 }
-                                                                V59::Excluded(e) => {
+                                                                V61::Excluded(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
                                                                     *base.add(12).cast::<i32>() =
                                                                         _rt::as_i32(e);
                                                                 }
-                                                                V59::Unbounded => {
+                                                                V61::Unbounded => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
-                                                            use super::super::super::super::wasi::rdbms::postgres::Int4bound as V60;
-                                                            match end58 {
-                                                                V60::Included(e) => {
-                                                                    *base.add(16).cast::<u8>() =
-                                                                        (0i32) as u8;
-                                                                    *base.add(20).cast::<i32>() =
-                                                                        _rt::as_i32(e);
-                                                                }
-                                                                V60::Excluded(e) => {
-                                                                    *base.add(16).cast::<u8>() =
-                                                                        (1i32) as u8;
-                                                                    *base.add(20).cast::<i32>() =
-                                                                        _rt::as_i32(e);
-                                                                }
-                                                                V60::Unbounded => {
-                                                                    *base.add(16).cast::<u8>() =
-                                                                        (2i32) as u8;
-                                                                }
-                                                            }
-                                                        }
-                                                        V121::Int8range(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (29i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Int8range{ start:start61, end:end61, } = e;
-                                                            use super::super::super::super::wasi::rdbms::postgres::Int8bound as V62;
-                                                            match start61 {
+                                                            use super::super::super::super::wasi::rdbms::postgres::Int4bound as V62;
+                                                            match end60 {
                                                                 V62::Included(e) => {
-                                                                    *base.add(8).cast::<u8>() =
+                                                                    *base.add(16).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    *base.add(16).cast::<i64>() =
-                                                                        _rt::as_i64(e);
+                                                                    *base.add(20).cast::<i32>() =
+                                                                        _rt::as_i32(e);
                                                                 }
                                                                 V62::Excluded(e) => {
+                                                                    *base.add(16).cast::<u8>() =
+                                                                        (1i32) as u8;
+                                                                    *base.add(20).cast::<i32>() =
+                                                                        _rt::as_i32(e);
+                                                                }
+                                                                V62::Unbounded => {
+                                                                    *base.add(16).cast::<u8>() =
+                                                                        (2i32) as u8;
+                                                                }
+                                                            }
+                                                        }
+                                                        V128::Int8range(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (29i32) as u8;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Int8range{ start:start63, end:end63, } = e;
+                                                            use super::super::super::super::wasi::rdbms::postgres::Int8bound as V64;
+                                                            match start63 {
+                                                                V64::Included(e) => {
+                                                                    *base.add(8).cast::<u8>() =
+                                                                        (0i32) as u8;
+                                                                    *base.add(16).cast::<i64>() =
+                                                                        _rt::as_i64(e);
+                                                                }
+                                                                V64::Excluded(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
                                                                     *base.add(16).cast::<i64>() =
                                                                         _rt::as_i64(e);
                                                                 }
-                                                                V62::Unbounded => {
+                                                                V64::Unbounded => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
-                                                            use super::super::super::super::wasi::rdbms::postgres::Int8bound as V63;
-                                                            match end61 {
-                                                                V63::Included(e) => {
+                                                            use super::super::super::super::wasi::rdbms::postgres::Int8bound as V65;
+                                                            match end63 {
+                                                                V65::Included(e) => {
                                                                     *base.add(24).cast::<u8>() =
                                                                         (0i32) as u8;
                                                                     *base.add(32).cast::<i64>() =
                                                                         _rt::as_i64(e);
                                                                 }
-                                                                V63::Excluded(e) => {
+                                                                V65::Excluded(e) => {
                                                                     *base.add(24).cast::<u8>() =
                                                                         (1i32) as u8;
                                                                     *base.add(32).cast::<i64>() =
                                                                         _rt::as_i64(e);
                                                                 }
-                                                                V63::Unbounded => {
+                                                                V65::Unbounded => {
                                                                     *base.add(24).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
                                                         }
-                                                        V121::Numrange(e) => {
+                                                        V128::Numrange(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (30i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Numrange{ start:start64, end:end64, } = e;
-                                                            use super::super::super::super::wasi::rdbms::postgres::Numbound as V67;
-                                                            match start64 {
-                                                                V67::Included(e) => {
+                                                            let super::super::super::super::wasi::rdbms::postgres::Numrange{ start:start66, end:end66, } = e;
+                                                            use super::super::super::super::wasi::rdbms::postgres::Numbound as V69;
+                                                            match start66 {
+                                                                V69::Included(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    let vec65 = (e.into_bytes())
+                                                                    let vec67 = (e.into_bytes())
                                                                         .into_boxed_slice();
-                                                                    let ptr65 =
-                                                                        vec65.as_ptr().cast::<u8>();
-                                                                    let len65 = vec65.len();
-                                                                    ::core::mem::forget(vec65);
+                                                                    let ptr67 =
+                                                                        vec67.as_ptr().cast::<u8>();
+                                                                    let len67 = vec67.len();
+                                                                    ::core::mem::forget(vec67);
                                                                     *base.add(16).cast::<usize>() =
-                                                                        len65;
+                                                                        len67;
                                                                     *base
                                                                         .add(12)
                                                                         .cast::<*mut u8>() =
-                                                                        ptr65.cast_mut();
+                                                                        ptr67.cast_mut();
                                                                 }
-                                                                V67::Excluded(e) => {
+                                                                V69::Excluded(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let vec66 = (e.into_bytes())
-                                                                        .into_boxed_slice();
-                                                                    let ptr66 =
-                                                                        vec66.as_ptr().cast::<u8>();
-                                                                    let len66 = vec66.len();
-                                                                    ::core::mem::forget(vec66);
-                                                                    *base.add(16).cast::<usize>() =
-                                                                        len66;
-                                                                    *base
-                                                                        .add(12)
-                                                                        .cast::<*mut u8>() =
-                                                                        ptr66.cast_mut();
-                                                                }
-                                                                V67::Unbounded => {
-                                                                    *base.add(8).cast::<u8>() =
-                                                                        (2i32) as u8;
-                                                                }
-                                                            }
-                                                            use super::super::super::super::wasi::rdbms::postgres::Numbound as V70;
-                                                            match end64 {
-                                                                V70::Included(e) => {
-                                                                    *base.add(20).cast::<u8>() =
-                                                                        (0i32) as u8;
                                                                     let vec68 = (e.into_bytes())
                                                                         .into_boxed_slice();
                                                                     let ptr68 =
                                                                         vec68.as_ptr().cast::<u8>();
                                                                     let len68 = vec68.len();
                                                                     ::core::mem::forget(vec68);
-                                                                    *base.add(28).cast::<usize>() =
+                                                                    *base.add(16).cast::<usize>() =
                                                                         len68;
                                                                     *base
-                                                                        .add(24)
+                                                                        .add(12)
                                                                         .cast::<*mut u8>() =
                                                                         ptr68.cast_mut();
                                                                 }
-                                                                V70::Excluded(e) => {
+                                                                V69::Unbounded => {
+                                                                    *base.add(8).cast::<u8>() =
+                                                                        (2i32) as u8;
+                                                                }
+                                                            }
+                                                            use super::super::super::super::wasi::rdbms::postgres::Numbound as V72;
+                                                            match end66 {
+                                                                V72::Included(e) => {
                                                                     *base.add(20).cast::<u8>() =
-                                                                        (1i32) as u8;
-                                                                    let vec69 = (e.into_bytes())
+                                                                        (0i32) as u8;
+                                                                    let vec70 = (e.into_bytes())
                                                                         .into_boxed_slice();
-                                                                    let ptr69 =
-                                                                        vec69.as_ptr().cast::<u8>();
-                                                                    let len69 = vec69.len();
-                                                                    ::core::mem::forget(vec69);
+                                                                    let ptr70 =
+                                                                        vec70.as_ptr().cast::<u8>();
+                                                                    let len70 = vec70.len();
+                                                                    ::core::mem::forget(vec70);
                                                                     *base.add(28).cast::<usize>() =
-                                                                        len69;
+                                                                        len70;
                                                                     *base
                                                                         .add(24)
                                                                         .cast::<*mut u8>() =
-                                                                        ptr69.cast_mut();
+                                                                        ptr70.cast_mut();
                                                                 }
-                                                                V70::Unbounded => {
+                                                                V72::Excluded(e) => {
+                                                                    *base.add(20).cast::<u8>() =
+                                                                        (1i32) as u8;
+                                                                    let vec71 = (e.into_bytes())
+                                                                        .into_boxed_slice();
+                                                                    let ptr71 =
+                                                                        vec71.as_ptr().cast::<u8>();
+                                                                    let len71 = vec71.len();
+                                                                    ::core::mem::forget(vec71);
+                                                                    *base.add(28).cast::<usize>() =
+                                                                        len71;
+                                                                    *base
+                                                                        .add(24)
+                                                                        .cast::<*mut u8>() =
+                                                                        ptr71.cast_mut();
+                                                                }
+                                                                V72::Unbounded => {
                                                                     *base.add(20).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
                                                         }
-                                                        V121::Tsrange(e) => {
+                                                        V128::Tsrange(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (31i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Tsrange{ start:start71, end:end71, } = e;
-                                                            use super::super::super::super::wasi::rdbms::postgres::Tsbound as V78;
-                                                            match start71 {
-                                                                V78::Included(e) => {
+                                                            let super::super::super::super::wasi::rdbms::postgres::Tsrange{ start:start73, end:end73, } = e;
+                                                            use super::super::super::super::wasi::rdbms::postgres::Tsbound as V80;
+                                                            match start73 {
+                                                                V80::Included(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date72, time:time72, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year73, month:month73, day:day73, } = date72;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date74, time:time74, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year75, month:month75, day:day75, } = date74;
                                                                     *base.add(12).cast::<i32>() =
-                                                                        _rt::as_i32(year73);
+                                                                        _rt::as_i32(year75);
                                                                     *base.add(16).cast::<u8>() =
-                                                                        (_rt::as_i32(month73))
+                                                                        (_rt::as_i32(month75))
                                                                             as u8;
                                                                     *base.add(17).cast::<u8>() =
-                                                                        (_rt::as_i32(day73)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour74, minute:minute74, second:second74, nanosecond:nanosecond74, } = time72;
+                                                                        (_rt::as_i32(day75)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour76, minute:minute76, second:second76, nanosecond:nanosecond76, } = time74;
                                                                     *base.add(20).cast::<u8>() =
-                                                                        (_rt::as_i32(hour74)) as u8;
+                                                                        (_rt::as_i32(hour76)) as u8;
                                                                     *base.add(21).cast::<u8>() =
-                                                                        (_rt::as_i32(minute74))
+                                                                        (_rt::as_i32(minute76))
                                                                             as u8;
                                                                     *base.add(22).cast::<u8>() =
-                                                                        (_rt::as_i32(second74))
+                                                                        (_rt::as_i32(second76))
                                                                             as u8;
                                                                     *base.add(24).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond74);
+                                                                        _rt::as_i32(nanosecond76);
                                                                 }
-                                                                V78::Excluded(e) => {
+                                                                V80::Excluded(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date75, time:time75, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year76, month:month76, day:day76, } = date75;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date77, time:time77, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year78, month:month78, day:day78, } = date77;
                                                                     *base.add(12).cast::<i32>() =
-                                                                        _rt::as_i32(year76);
+                                                                        _rt::as_i32(year78);
                                                                     *base.add(16).cast::<u8>() =
-                                                                        (_rt::as_i32(month76))
+                                                                        (_rt::as_i32(month78))
                                                                             as u8;
                                                                     *base.add(17).cast::<u8>() =
-                                                                        (_rt::as_i32(day76)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour77, minute:minute77, second:second77, nanosecond:nanosecond77, } = time75;
+                                                                        (_rt::as_i32(day78)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour79, minute:minute79, second:second79, nanosecond:nanosecond79, } = time77;
                                                                     *base.add(20).cast::<u8>() =
-                                                                        (_rt::as_i32(hour77)) as u8;
+                                                                        (_rt::as_i32(hour79)) as u8;
                                                                     *base.add(21).cast::<u8>() =
-                                                                        (_rt::as_i32(minute77))
+                                                                        (_rt::as_i32(minute79))
                                                                             as u8;
                                                                     *base.add(22).cast::<u8>() =
-                                                                        (_rt::as_i32(second77))
+                                                                        (_rt::as_i32(second79))
                                                                             as u8;
                                                                     *base.add(24).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond77);
+                                                                        _rt::as_i32(nanosecond79);
                                                                 }
-                                                                V78::Unbounded => {
+                                                                V80::Unbounded => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
-                                                            use super::super::super::super::wasi::rdbms::postgres::Tsbound as V85;
-                                                            match end71 {
-                                                                V85::Included(e) => {
+                                                            use super::super::super::super::wasi::rdbms::postgres::Tsbound as V87;
+                                                            match end73 {
+                                                                V87::Included(e) => {
                                                                     *base.add(28).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date79, time:time79, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year80, month:month80, day:day80, } = date79;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date81, time:time81, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year82, month:month82, day:day82, } = date81;
                                                                     *base.add(32).cast::<i32>() =
-                                                                        _rt::as_i32(year80);
+                                                                        _rt::as_i32(year82);
                                                                     *base.add(36).cast::<u8>() =
-                                                                        (_rt::as_i32(month80))
+                                                                        (_rt::as_i32(month82))
                                                                             as u8;
                                                                     *base.add(37).cast::<u8>() =
-                                                                        (_rt::as_i32(day80)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour81, minute:minute81, second:second81, nanosecond:nanosecond81, } = time79;
+                                                                        (_rt::as_i32(day82)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour83, minute:minute83, second:second83, nanosecond:nanosecond83, } = time81;
                                                                     *base.add(40).cast::<u8>() =
-                                                                        (_rt::as_i32(hour81)) as u8;
+                                                                        (_rt::as_i32(hour83)) as u8;
                                                                     *base.add(41).cast::<u8>() =
-                                                                        (_rt::as_i32(minute81))
+                                                                        (_rt::as_i32(minute83))
                                                                             as u8;
                                                                     *base.add(42).cast::<u8>() =
-                                                                        (_rt::as_i32(second81))
+                                                                        (_rt::as_i32(second83))
                                                                             as u8;
                                                                     *base.add(44).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond81);
+                                                                        _rt::as_i32(nanosecond83);
                                                                 }
-                                                                V85::Excluded(e) => {
+                                                                V87::Excluded(e) => {
                                                                     *base.add(28).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date82, time:time82, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year83, month:month83, day:day83, } = date82;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date84, time:time84, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year85, month:month85, day:day85, } = date84;
                                                                     *base.add(32).cast::<i32>() =
-                                                                        _rt::as_i32(year83);
+                                                                        _rt::as_i32(year85);
                                                                     *base.add(36).cast::<u8>() =
-                                                                        (_rt::as_i32(month83))
+                                                                        (_rt::as_i32(month85))
                                                                             as u8;
                                                                     *base.add(37).cast::<u8>() =
-                                                                        (_rt::as_i32(day83)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour84, minute:minute84, second:second84, nanosecond:nanosecond84, } = time82;
+                                                                        (_rt::as_i32(day85)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour86, minute:minute86, second:second86, nanosecond:nanosecond86, } = time84;
                                                                     *base.add(40).cast::<u8>() =
-                                                                        (_rt::as_i32(hour84)) as u8;
+                                                                        (_rt::as_i32(hour86)) as u8;
                                                                     *base.add(41).cast::<u8>() =
-                                                                        (_rt::as_i32(minute84))
+                                                                        (_rt::as_i32(minute86))
                                                                             as u8;
                                                                     *base.add(42).cast::<u8>() =
-                                                                        (_rt::as_i32(second84))
+                                                                        (_rt::as_i32(second86))
                                                                             as u8;
                                                                     *base.add(44).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond84);
+                                                                        _rt::as_i32(nanosecond86);
                                                                 }
-                                                                V85::Unbounded => {
+                                                                V87::Unbounded => {
                                                                     *base.add(28).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
                                                         }
-                                                        V121::Tstzrange(e) => {
+                                                        V128::Tstzrange(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (32i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Tstzrange{ start:start86, end:end86, } = e;
-                                                            use super::super::super::super::wasi::rdbms::postgres::Tstzbound as V95;
-                                                            match start86 {
-                                                                V95::Included(e) => {
+                                                            let super::super::super::super::wasi::rdbms::postgres::Tstzrange{ start:start88, end:end88, } = e;
+                                                            use super::super::super::super::wasi::rdbms::postgres::Tstzbound as V97;
+                                                            match start88 {
+                                                                V97::Included(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp87, offset:offset87, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date88, time:time88, } = timestamp87;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year89, month:month89, day:day89, } = date88;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp89, offset:offset89, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date90, time:time90, } = timestamp89;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year91, month:month91, day:day91, } = date90;
                                                                     *base.add(12).cast::<i32>() =
-                                                                        _rt::as_i32(year89);
+                                                                        _rt::as_i32(year91);
                                                                     *base.add(16).cast::<u8>() =
-                                                                        (_rt::as_i32(month89))
+                                                                        (_rt::as_i32(month91))
                                                                             as u8;
                                                                     *base.add(17).cast::<u8>() =
-                                                                        (_rt::as_i32(day89)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour90, minute:minute90, second:second90, nanosecond:nanosecond90, } = time88;
+                                                                        (_rt::as_i32(day91)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour92, minute:minute92, second:second92, nanosecond:nanosecond92, } = time90;
                                                                     *base.add(20).cast::<u8>() =
-                                                                        (_rt::as_i32(hour90)) as u8;
+                                                                        (_rt::as_i32(hour92)) as u8;
                                                                     *base.add(21).cast::<u8>() =
-                                                                        (_rt::as_i32(minute90))
+                                                                        (_rt::as_i32(minute92))
                                                                             as u8;
                                                                     *base.add(22).cast::<u8>() =
-                                                                        (_rt::as_i32(second90))
+                                                                        (_rt::as_i32(second92))
                                                                             as u8;
                                                                     *base.add(24).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond90);
+                                                                        _rt::as_i32(nanosecond92);
                                                                     *base.add(28).cast::<i32>() =
-                                                                        _rt::as_i32(offset87);
+                                                                        _rt::as_i32(offset89);
                                                                 }
-                                                                V95::Excluded(e) => {
+                                                                V97::Excluded(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp91, offset:offset91, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date92, time:time92, } = timestamp91;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year93, month:month93, day:day93, } = date92;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp93, offset:offset93, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date94, time:time94, } = timestamp93;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year95, month:month95, day:day95, } = date94;
                                                                     *base.add(12).cast::<i32>() =
-                                                                        _rt::as_i32(year93);
+                                                                        _rt::as_i32(year95);
                                                                     *base.add(16).cast::<u8>() =
-                                                                        (_rt::as_i32(month93))
+                                                                        (_rt::as_i32(month95))
                                                                             as u8;
                                                                     *base.add(17).cast::<u8>() =
-                                                                        (_rt::as_i32(day93)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour94, minute:minute94, second:second94, nanosecond:nanosecond94, } = time92;
+                                                                        (_rt::as_i32(day95)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour96, minute:minute96, second:second96, nanosecond:nanosecond96, } = time94;
                                                                     *base.add(20).cast::<u8>() =
-                                                                        (_rt::as_i32(hour94)) as u8;
+                                                                        (_rt::as_i32(hour96)) as u8;
                                                                     *base.add(21).cast::<u8>() =
-                                                                        (_rt::as_i32(minute94))
+                                                                        (_rt::as_i32(minute96))
                                                                             as u8;
                                                                     *base.add(22).cast::<u8>() =
-                                                                        (_rt::as_i32(second94))
+                                                                        (_rt::as_i32(second96))
                                                                             as u8;
                                                                     *base.add(24).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond94);
+                                                                        _rt::as_i32(nanosecond96);
                                                                     *base.add(28).cast::<i32>() =
-                                                                        _rt::as_i32(offset91);
+                                                                        _rt::as_i32(offset93);
                                                                 }
-                                                                V95::Unbounded => {
+                                                                V97::Unbounded => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
-                                                            use super::super::super::super::wasi::rdbms::postgres::Tstzbound as V104;
-                                                            match end86 {
-                                                                V104::Included(e) => {
+                                                            use super::super::super::super::wasi::rdbms::postgres::Tstzbound as V106;
+                                                            match end88 {
+                                                                V106::Included(e) => {
                                                                     *base.add(32).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp96, offset:offset96, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date97, time:time97, } = timestamp96;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year98, month:month98, day:day98, } = date97;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp98, offset:offset98, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date99, time:time99, } = timestamp98;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year100, month:month100, day:day100, } = date99;
                                                                     *base.add(36).cast::<i32>() =
-                                                                        _rt::as_i32(year98);
+                                                                        _rt::as_i32(year100);
                                                                     *base.add(40).cast::<u8>() =
-                                                                        (_rt::as_i32(month98))
+                                                                        (_rt::as_i32(month100))
                                                                             as u8;
                                                                     *base.add(41).cast::<u8>() =
-                                                                        (_rt::as_i32(day98)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour99, minute:minute99, second:second99, nanosecond:nanosecond99, } = time97;
+                                                                        (_rt::as_i32(day100)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour101, minute:minute101, second:second101, nanosecond:nanosecond101, } = time99;
                                                                     *base.add(44).cast::<u8>() =
-                                                                        (_rt::as_i32(hour99)) as u8;
+                                                                        (_rt::as_i32(hour101))
+                                                                            as u8;
                                                                     *base.add(45).cast::<u8>() =
-                                                                        (_rt::as_i32(minute99))
+                                                                        (_rt::as_i32(minute101))
                                                                             as u8;
                                                                     *base.add(46).cast::<u8>() =
-                                                                        (_rt::as_i32(second99))
+                                                                        (_rt::as_i32(second101))
                                                                             as u8;
                                                                     *base.add(48).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond99);
+                                                                        _rt::as_i32(nanosecond101);
                                                                     *base.add(52).cast::<i32>() =
-                                                                        _rt::as_i32(offset96);
+                                                                        _rt::as_i32(offset98);
                                                                 }
-                                                                V104::Excluded(e) => {
+                                                                V106::Excluded(e) => {
                                                                     *base.add(32).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp100, offset:offset100, } = e;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date101, time:time101, } = timestamp100;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year102, month:month102, day:day102, } = date101;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamptz{ timestamp:timestamp102, offset:offset102, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Timestamp{ date:date103, time:time103, } = timestamp102;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year104, month:month104, day:day104, } = date103;
                                                                     *base.add(36).cast::<i32>() =
-                                                                        _rt::as_i32(year102);
+                                                                        _rt::as_i32(year104);
                                                                     *base.add(40).cast::<u8>() =
-                                                                        (_rt::as_i32(month102))
+                                                                        (_rt::as_i32(month104))
                                                                             as u8;
                                                                     *base.add(41).cast::<u8>() =
-                                                                        (_rt::as_i32(day102)) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour103, minute:minute103, second:second103, nanosecond:nanosecond103, } = time101;
+                                                                        (_rt::as_i32(day104)) as u8;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Time{ hour:hour105, minute:minute105, second:second105, nanosecond:nanosecond105, } = time103;
                                                                     *base.add(44).cast::<u8>() =
-                                                                        (_rt::as_i32(hour103))
+                                                                        (_rt::as_i32(hour105))
                                                                             as u8;
                                                                     *base.add(45).cast::<u8>() =
-                                                                        (_rt::as_i32(minute103))
+                                                                        (_rt::as_i32(minute105))
                                                                             as u8;
                                                                     *base.add(46).cast::<u8>() =
-                                                                        (_rt::as_i32(second103))
+                                                                        (_rt::as_i32(second105))
                                                                             as u8;
                                                                     *base.add(48).cast::<i32>() =
-                                                                        _rt::as_i32(nanosecond103);
+                                                                        _rt::as_i32(nanosecond105);
                                                                     *base.add(52).cast::<i32>() =
-                                                                        _rt::as_i32(offset100);
+                                                                        _rt::as_i32(offset102);
                                                                 }
-                                                                V104::Unbounded => {
+                                                                V106::Unbounded => {
                                                                     *base.add(32).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
                                                         }
-                                                        V121::Daterange(e) => {
+                                                        V128::Daterange(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (33i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Daterange{ start:start105, end:end105, } = e;
-                                                            use super::super::super::super::wasi::rdbms::postgres::Datebound as V108;
-                                                            match start105 {
-                                                                V108::Included(e) => {
+                                                            let super::super::super::super::wasi::rdbms::postgres::Daterange{ start:start107, end:end107, } = e;
+                                                            use super::super::super::super::wasi::rdbms::postgres::Datebound as V110;
+                                                            match start107 {
+                                                                V110::Included(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year106, month:month106, day:day106, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year108, month:month108, day:day108, } = e;
                                                                     *base.add(12).cast::<i32>() =
-                                                                        _rt::as_i32(year106);
+                                                                        _rt::as_i32(year108);
                                                                     *base.add(16).cast::<u8>() =
-                                                                        (_rt::as_i32(month106))
+                                                                        (_rt::as_i32(month108))
                                                                             as u8;
                                                                     *base.add(17).cast::<u8>() =
-                                                                        (_rt::as_i32(day106)) as u8;
+                                                                        (_rt::as_i32(day108)) as u8;
                                                                 }
-                                                                V108::Excluded(e) => {
+                                                                V110::Excluded(e) => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year107, month:month107, day:day107, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year109, month:month109, day:day109, } = e;
                                                                     *base.add(12).cast::<i32>() =
-                                                                        _rt::as_i32(year107);
+                                                                        _rt::as_i32(year109);
                                                                     *base.add(16).cast::<u8>() =
-                                                                        (_rt::as_i32(month107))
+                                                                        (_rt::as_i32(month109))
                                                                             as u8;
                                                                     *base.add(17).cast::<u8>() =
-                                                                        (_rt::as_i32(day107)) as u8;
+                                                                        (_rt::as_i32(day109)) as u8;
                                                                 }
-                                                                V108::Unbounded => {
+                                                                V110::Unbounded => {
                                                                     *base.add(8).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
-                                                            use super::super::super::super::wasi::rdbms::postgres::Datebound as V111;
-                                                            match end105 {
-                                                                V111::Included(e) => {
+                                                            use super::super::super::super::wasi::rdbms::postgres::Datebound as V113;
+                                                            match end107 {
+                                                                V113::Included(e) => {
                                                                     *base.add(20).cast::<u8>() =
                                                                         (0i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year109, month:month109, day:day109, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year111, month:month111, day:day111, } = e;
                                                                     *base.add(24).cast::<i32>() =
-                                                                        _rt::as_i32(year109);
+                                                                        _rt::as_i32(year111);
                                                                     *base.add(28).cast::<u8>() =
-                                                                        (_rt::as_i32(month109))
+                                                                        (_rt::as_i32(month111))
                                                                             as u8;
                                                                     *base.add(29).cast::<u8>() =
-                                                                        (_rt::as_i32(day109)) as u8;
+                                                                        (_rt::as_i32(day111)) as u8;
                                                                 }
-                                                                V111::Excluded(e) => {
+                                                                V113::Excluded(e) => {
                                                                     *base.add(20).cast::<u8>() =
                                                                         (1i32) as u8;
-                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year110, month:month110, day:day110, } = e;
+                                                                    let super::super::super::super::wasi::rdbms::postgres::Date{ year:year112, month:month112, day:day112, } = e;
                                                                     *base.add(24).cast::<i32>() =
-                                                                        _rt::as_i32(year110);
+                                                                        _rt::as_i32(year112);
                                                                     *base.add(28).cast::<u8>() =
-                                                                        (_rt::as_i32(month110))
+                                                                        (_rt::as_i32(month112))
                                                                             as u8;
                                                                     *base.add(29).cast::<u8>() =
-                                                                        (_rt::as_i32(day110)) as u8;
+                                                                        (_rt::as_i32(day112)) as u8;
                                                                 }
-                                                                V111::Unbounded => {
+                                                                V113::Unbounded => {
                                                                     *base.add(20).cast::<u8>() =
                                                                         (2i32) as u8;
                                                                 }
                                                             }
                                                         }
-                                                        V121::Money(e) => {
+                                                        V128::Money(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (34i32) as u8;
                                                             *base.add(8).cast::<i64>() =
                                                                 _rt::as_i64(e);
                                                         }
-                                                        V121::Oid(e) => {
+                                                        V128::Oid(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (35i32) as u8;
                                                             *base.add(8).cast::<i32>() =
                                                                 _rt::as_i32(e);
                                                         }
-                                                        V121::Enumeration(e) => {
+                                                        V128::Enumeration(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (36i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Enumeration{ name:name112, value:value112, } = e;
-                                                            let vec113 = (name112.into_bytes())
+                                                            let super::super::super::super::wasi::rdbms::postgres::Enumeration{ name:name114, value:value114, } = e;
+                                                            let vec115 = (name114.into_bytes())
                                                                 .into_boxed_slice();
-                                                            let ptr113 =
-                                                                vec113.as_ptr().cast::<u8>();
-                                                            let len113 = vec113.len();
-                                                            ::core::mem::forget(vec113);
-                                                            *base.add(12).cast::<usize>() = len113;
+                                                            let ptr115 =
+                                                                vec115.as_ptr().cast::<u8>();
+                                                            let len115 = vec115.len();
+                                                            ::core::mem::forget(vec115);
+                                                            *base.add(12).cast::<usize>() = len115;
                                                             *base.add(8).cast::<*mut u8>() =
-                                                                ptr113.cast_mut();
-                                                            let vec114 = (value112.into_bytes())
-                                                                .into_boxed_slice();
-                                                            let ptr114 =
-                                                                vec114.as_ptr().cast::<u8>();
-                                                            let len114 = vec114.len();
-                                                            ::core::mem::forget(vec114);
-                                                            *base.add(20).cast::<usize>() = len114;
-                                                            *base.add(16).cast::<*mut u8>() =
-                                                                ptr114.cast_mut();
-                                                        }
-                                                        V121::Composite(e) => {
-                                                            *base.add(0).cast::<u8>() =
-                                                                (37i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Composite{ name:name115, values:values115, } = e;
-                                                            let vec116 = (name115.into_bytes())
+                                                                ptr115.cast_mut();
+                                                            let vec116 = (value114.into_bytes())
                                                                 .into_boxed_slice();
                                                             let ptr116 =
                                                                 vec116.as_ptr().cast::<u8>();
                                                             let len116 = vec116.len();
                                                             ::core::mem::forget(vec116);
-                                                            *base.add(12).cast::<usize>() = len116;
-                                                            *base.add(8).cast::<*mut u8>() =
-                                                                ptr116.cast_mut();
-                                                            let vec117 =
-                                                                (values115).into_boxed_slice();
-                                                            let ptr117 =
-                                                                vec117.as_ptr().cast::<u8>();
-                                                            let len117 = vec117.len();
-                                                            ::core::mem::forget(vec117);
-                                                            *base.add(20).cast::<usize>() = len117;
+                                                            *base.add(20).cast::<usize>() = len116;
                                                             *base.add(16).cast::<*mut u8>() =
-                                                                ptr117.cast_mut();
+                                                                ptr116.cast_mut();
                                                         }
-                                                        V121::Domain(e) => {
+                                                        V128::Composite(e) => {
                                                             *base.add(0).cast::<u8>() =
-                                                                (38i32) as u8;
-                                                            let super::super::super::super::wasi::rdbms::postgres::Domain{ name:name118, value:value118, } = e;
-                                                            let vec119 = (name118.into_bytes())
+                                                                (37i32) as u8;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Composite{ name:name117, values:values117, } = e;
+                                                            let vec118 = (name117.into_bytes())
                                                                 .into_boxed_slice();
+                                                            let ptr118 =
+                                                                vec118.as_ptr().cast::<u8>();
+                                                            let len118 = vec118.len();
+                                                            ::core::mem::forget(vec118);
+                                                            *base.add(12).cast::<usize>() = len118;
+                                                            *base.add(8).cast::<*mut u8>() =
+                                                                ptr118.cast_mut();
+                                                            let vec119 =
+                                                                (values117).into_boxed_slice();
                                                             let ptr119 =
                                                                 vec119.as_ptr().cast::<u8>();
                                                             let len119 = vec119.len();
                                                             ::core::mem::forget(vec119);
-                                                            *base.add(12).cast::<usize>() = len119;
-                                                            *base.add(8).cast::<*mut u8>() =
+                                                            *base.add(20).cast::<usize>() = len119;
+                                                            *base.add(16).cast::<*mut u8>() =
                                                                 ptr119.cast_mut();
-                                                            *base.add(16).cast::<i32>() =
-                                                                _rt::as_i32(value118);
                                                         }
-                                                        V121::Array(e) => {
+                                                        V128::Domain(e) => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (38i32) as u8;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Domain{ name:name120, value:value120, } = e;
+                                                            let vec121 = (name120.into_bytes())
+                                                                .into_boxed_slice();
+                                                            let ptr121 =
+                                                                vec121.as_ptr().cast::<u8>();
+                                                            let len121 = vec121.len();
+                                                            ::core::mem::forget(vec121);
+                                                            *base.add(12).cast::<usize>() = len121;
+                                                            *base.add(8).cast::<*mut u8>() =
+                                                                ptr121.cast_mut();
+                                                            *base.add(16).cast::<i32>() =
+                                                                _rt::as_i32(value120);
+                                                        }
+                                                        V128::Range(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (39i32) as u8;
-                                                            let vec120 = (e).into_boxed_slice();
-                                                            let ptr120 =
-                                                                vec120.as_ptr().cast::<u8>();
-                                                            let len120 = vec120.len();
-                                                            ::core::mem::forget(vec120);
-                                                            *base.add(12).cast::<usize>() = len120;
+                                                            let super::super::super::super::wasi::rdbms::postgres::Range{ name:name122, value:value122, } = e;
+                                                            let vec123 = (name122.into_bytes())
+                                                                .into_boxed_slice();
+                                                            let ptr123 =
+                                                                vec123.as_ptr().cast::<u8>();
+                                                            let len123 = vec123.len();
+                                                            ::core::mem::forget(vec123);
+                                                            *base.add(12).cast::<usize>() = len123;
                                                             *base.add(8).cast::<*mut u8>() =
-                                                                ptr120.cast_mut();
+                                                                ptr123.cast_mut();
+                                                            let super::super::super::super::wasi::rdbms::postgres::ValuesRange{ start:start124, end:end124, } = value122;
+                                                            use super::super::super::super::wasi::rdbms::postgres::ValueBound as V125;
+                                                            match start124 {
+                                                                V125::Included(e) => {
+                                                                    *base.add(16).cast::<u8>() =
+                                                                        (0i32) as u8;
+                                                                    *base.add(20).cast::<i32>() =
+                                                                        _rt::as_i32(e);
+                                                                }
+                                                                V125::Excluded(e) => {
+                                                                    *base.add(16).cast::<u8>() =
+                                                                        (1i32) as u8;
+                                                                    *base.add(20).cast::<i32>() =
+                                                                        _rt::as_i32(e);
+                                                                }
+                                                                V125::Unbounded => {
+                                                                    *base.add(16).cast::<u8>() =
+                                                                        (2i32) as u8;
+                                                                }
+                                                            }
+                                                            use super::super::super::super::wasi::rdbms::postgres::ValueBound as V126;
+                                                            match end124 {
+                                                                V126::Included(e) => {
+                                                                    *base.add(24).cast::<u8>() =
+                                                                        (0i32) as u8;
+                                                                    *base.add(28).cast::<i32>() =
+                                                                        _rt::as_i32(e);
+                                                                }
+                                                                V126::Excluded(e) => {
+                                                                    *base.add(24).cast::<u8>() =
+                                                                        (1i32) as u8;
+                                                                    *base.add(28).cast::<i32>() =
+                                                                        _rt::as_i32(e);
+                                                                }
+                                                                V126::Unbounded => {
+                                                                    *base.add(24).cast::<u8>() =
+                                                                        (2i32) as u8;
+                                                                }
+                                                            }
                                                         }
-                                                        V121::Null => {
+                                                        V128::Array(e) => {
                                                             *base.add(0).cast::<u8>() =
                                                                 (40i32) as u8;
+                                                            let vec127 = (e).into_boxed_slice();
+                                                            let ptr127 =
+                                                                vec127.as_ptr().cast::<u8>();
+                                                            let len127 = vec127.len();
+                                                            ::core::mem::forget(vec127);
+                                                            *base.add(12).cast::<usize>() = len127;
+                                                            *base.add(8).cast::<*mut u8>() =
+                                                                ptr127.cast_mut();
+                                                        }
+                                                        V128::Null => {
+                                                            *base.add(0).cast::<u8>() =
+                                                                (41i32) as u8;
                                                         }
                                                     }
                                                 }
                                             }
-                                            *base.add(4).cast::<usize>() = len122;
-                                            *base.add(0).cast::<*mut u8>() = result122;
+                                            *base.add(4).cast::<usize>() = len129;
+                                            *base.add(0).cast::<*mut u8>() = result129;
                                         }
                                     }
-                                    *base.add(4).cast::<usize>() = len123;
-                                    *base.add(0).cast::<*mut u8>() = result123;
+                                    *base.add(4).cast::<usize>() = len130;
+                                    *base.add(0).cast::<*mut u8>() = result130;
                                 }
                             }
-                            *ptr6.add(16).cast::<usize>() = len124;
-                            *ptr6.add(12).cast::<*mut u8>() = result124;
+                            *ptr6.add(16).cast::<usize>() = len131;
+                            *ptr6.add(12).cast::<*mut u8>() = result131;
                         }
                         Err(e) => {
                             *ptr6.add(0).cast::<u8>() = (1i32) as u8;
-                            let vec125 = (e.into_bytes()).into_boxed_slice();
-                            let ptr125 = vec125.as_ptr().cast::<u8>();
-                            let len125 = vec125.len();
-                            ::core::mem::forget(vec125);
-                            *ptr6.add(8).cast::<usize>() = len125;
-                            *ptr6.add(4).cast::<*mut u8>() = ptr125.cast_mut();
+                            let vec132 = (e.into_bytes()).into_boxed_slice();
+                            let ptr132 = vec132.as_ptr().cast::<u8>();
+                            let len132 = vec132.len();
+                            ::core::mem::forget(vec132);
+                            *ptr6.add(8).cast::<usize>() = len132;
+                            *ptr6.add(4).cast::<*mut u8>() = ptr132.cast_mut();
                         }
                     };
                     ptr6
@@ -9902,22 +10130,22 @@ pub mod exports {
                     let l0 = i32::from(*arg0.add(0).cast::<u8>());
                     match l0 {
                         0 => {
-                            let l20 = *arg0.add(4).cast::<*mut u8>();
-                            let l21 = *arg0.add(8).cast::<usize>();
-                            let base22 = l20;
-                            let len22 = l21;
-                            for i in 0..len22 {
-                                let base = base22.add(i * 32);
+                            let l22 = *arg0.add(4).cast::<*mut u8>();
+                            let l23 = *arg0.add(8).cast::<usize>();
+                            let base24 = l22;
+                            let len24 = l23;
+                            for i in 0..len24 {
+                                let base = base24.add(i * 32);
                                 {
                                     let l1 = *base.add(8).cast::<*mut u8>();
                                     let l2 = *base.add(12).cast::<usize>();
                                     _rt::cabi_dealloc(l1, l2, 1);
-                                    let l15 = *base.add(16).cast::<*mut u8>();
-                                    let l16 = *base.add(20).cast::<usize>();
-                                    let base17 = l15;
-                                    let len17 = l16;
-                                    for i in 0..len17 {
-                                        let base = base17.add(i * 20);
+                                    let l17 = *base.add(16).cast::<*mut u8>();
+                                    let l18 = *base.add(20).cast::<usize>();
+                                    let base19 = l17;
+                                    let len19 = l18;
+                                    for i in 0..len19 {
+                                        let base = base19.add(i * 20);
                                         {
                                             let l3 = i32::from(*base.add(0).cast::<u8>());
                                             match l3 {
@@ -9985,40 +10213,45 @@ pub mod exports {
                                                     let l14 = *base.add(8).cast::<usize>();
                                                     _rt::cabi_dealloc(l13, l14, 1);
                                                 }
+                                                39 => {
+                                                    let l15 = *base.add(4).cast::<*mut u8>();
+                                                    let l16 = *base.add(8).cast::<usize>();
+                                                    _rt::cabi_dealloc(l15, l16, 1);
+                                                }
                                                 _ => (),
                                             }
                                         }
                                     }
-                                    _rt::cabi_dealloc(base17, len17 * 20, 4);
-                                    let l18 = *base.add(24).cast::<*mut u8>();
-                                    let l19 = *base.add(28).cast::<usize>();
-                                    _rt::cabi_dealloc(l18, l19, 1);
+                                    _rt::cabi_dealloc(base19, len19 * 20, 4);
+                                    let l20 = *base.add(24).cast::<*mut u8>();
+                                    let l21 = *base.add(28).cast::<usize>();
+                                    _rt::cabi_dealloc(l20, l21, 1);
                                 }
                             }
-                            _rt::cabi_dealloc(base22, len22 * 32, 8);
-                            let l79 = *arg0.add(12).cast::<*mut u8>();
-                            let l80 = *arg0.add(16).cast::<usize>();
-                            let base81 = l79;
-                            let len81 = l80;
-                            for i in 0..len81 {
-                                let base = base81.add(i * 8);
+                            _rt::cabi_dealloc(base24, len24 * 32, 8);
+                            let l83 = *arg0.add(12).cast::<*mut u8>();
+                            let l84 = *arg0.add(16).cast::<usize>();
+                            let base85 = l83;
+                            let len85 = l84;
+                            for i in 0..len85 {
+                                let base = base85.add(i * 8);
                                 {
-                                    let l76 = *base.add(0).cast::<*mut u8>();
-                                    let l77 = *base.add(4).cast::<usize>();
-                                    let base78 = l76;
-                                    let len78 = l77;
-                                    for i in 0..len78 {
-                                        let base = base78.add(i * 8);
+                                    let l80 = *base.add(0).cast::<*mut u8>();
+                                    let l81 = *base.add(4).cast::<usize>();
+                                    let base82 = l80;
+                                    let len82 = l81;
+                                    for i in 0..len82 {
+                                        let base = base82.add(i * 8);
                                         {
-                                            let l73 = *base.add(0).cast::<*mut u8>();
-                                            let l74 = *base.add(4).cast::<usize>();
-                                            let base75 = l73;
-                                            let len75 = l74;
-                                            for i in 0..len75 {
-                                                let base = base75.add(i * 56);
+                                            let l77 = *base.add(0).cast::<*mut u8>();
+                                            let l78 = *base.add(4).cast::<usize>();
+                                            let base79 = l77;
+                                            let len79 = l78;
+                                            for i in 0..len79 {
+                                                let base = base79.add(i * 56);
                                                 {
-                                                    let l23 = i32::from(*base.add(0).cast::<u8>());
-                                                    match l23 {
+                                                    let l25 = i32::from(*base.add(0).cast::<u8>());
+                                                    match l25 {
                                                         0 => (),
                                                         1 => (),
                                                         2 => (),
@@ -10026,29 +10259,29 @@ pub mod exports {
                                                         4 => (),
                                                         5 => (),
                                                         6 => {
-                                                            let l24 =
-                                                                *base.add(8).cast::<*mut u8>();
-                                                            let l25 = *base.add(12).cast::<usize>();
-                                                            _rt::cabi_dealloc(l24, l25, 1);
-                                                        }
-                                                        7 => (),
-                                                        8 => {
                                                             let l26 =
                                                                 *base.add(8).cast::<*mut u8>();
                                                             let l27 = *base.add(12).cast::<usize>();
                                                             _rt::cabi_dealloc(l26, l27, 1);
                                                         }
-                                                        9 => {
+                                                        7 => (),
+                                                        8 => {
                                                             let l28 =
                                                                 *base.add(8).cast::<*mut u8>();
                                                             let l29 = *base.add(12).cast::<usize>();
                                                             _rt::cabi_dealloc(l28, l29, 1);
                                                         }
-                                                        10 => {
+                                                        9 => {
                                                             let l30 =
                                                                 *base.add(8).cast::<*mut u8>();
                                                             let l31 = *base.add(12).cast::<usize>();
                                                             _rt::cabi_dealloc(l30, l31, 1);
+                                                        }
+                                                        10 => {
+                                                            let l32 =
+                                                                *base.add(8).cast::<*mut u8>();
+                                                            let l33 = *base.add(12).cast::<usize>();
+                                                            _rt::cabi_dealloc(l32, l33, 1);
                                                         }
                                                         11 => (),
                                                         12 => (),
@@ -10057,74 +10290,65 @@ pub mod exports {
                                                         15 => (),
                                                         16 => (),
                                                         17 => {
-                                                            let l32 =
+                                                            let l34 =
                                                                 *base.add(8).cast::<*mut u8>();
-                                                            let l33 = *base.add(12).cast::<usize>();
-                                                            let base34 = l32;
-                                                            let len34 = l33;
-                                                            _rt::cabi_dealloc(base34, len34 * 1, 1);
+                                                            let l35 = *base.add(12).cast::<usize>();
+                                                            let base36 = l34;
+                                                            let len36 = l35;
+                                                            _rt::cabi_dealloc(base36, len36 * 1, 1);
                                                         }
                                                         18 => {
-                                                            let l35 =
-                                                                *base.add(8).cast::<*mut u8>();
-                                                            let l36 = *base.add(12).cast::<usize>();
-                                                            _rt::cabi_dealloc(l35, l36, 1);
-                                                        }
-                                                        19 => {
                                                             let l37 =
                                                                 *base.add(8).cast::<*mut u8>();
                                                             let l38 = *base.add(12).cast::<usize>();
                                                             _rt::cabi_dealloc(l37, l38, 1);
                                                         }
-                                                        20 => {
+                                                        19 => {
                                                             let l39 =
                                                                 *base.add(8).cast::<*mut u8>();
                                                             let l40 = *base.add(12).cast::<usize>();
                                                             _rt::cabi_dealloc(l39, l40, 1);
                                                         }
-                                                        21 => {
+                                                        20 => {
                                                             let l41 =
                                                                 *base.add(8).cast::<*mut u8>();
                                                             let l42 = *base.add(12).cast::<usize>();
                                                             _rt::cabi_dealloc(l41, l42, 1);
+                                                        }
+                                                        21 => {
+                                                            let l43 =
+                                                                *base.add(8).cast::<*mut u8>();
+                                                            let l44 = *base.add(12).cast::<usize>();
+                                                            _rt::cabi_dealloc(l43, l44, 1);
                                                         }
                                                         22 => (),
                                                         23 => (),
                                                         24 => (),
                                                         25 => (),
                                                         26 => {
-                                                            let l43 =
+                                                            let l45 =
                                                                 *base.add(8).cast::<*mut u8>();
-                                                            let l44 = *base.add(12).cast::<usize>();
-                                                            let base45 = l43;
-                                                            let len45 = l44;
-                                                            _rt::cabi_dealloc(base45, len45 * 1, 1);
+                                                            let l46 = *base.add(12).cast::<usize>();
+                                                            let base47 = l45;
+                                                            let len47 = l46;
+                                                            _rt::cabi_dealloc(base47, len47 * 1, 1);
                                                         }
                                                         27 => {
-                                                            let l46 =
+                                                            let l48 =
                                                                 *base.add(8).cast::<*mut u8>();
-                                                            let l47 = *base.add(12).cast::<usize>();
-                                                            let base48 = l46;
-                                                            let len48 = l47;
-                                                            _rt::cabi_dealloc(base48, len48 * 1, 1);
+                                                            let l49 = *base.add(12).cast::<usize>();
+                                                            let base50 = l48;
+                                                            let len50 = l49;
+                                                            _rt::cabi_dealloc(base50, len50 * 1, 1);
                                                         }
                                                         28 => (),
                                                         29 => (),
                                                         30 => {
-                                                            let l49 = i32::from(
+                                                            let l51 = i32::from(
                                                                 *base.add(8).cast::<u8>(),
                                                             );
-                                                            match l49 {
+                                                            match l51 {
                                                                 0 => {
-                                                                    let l50 = *base
-                                                                        .add(12)
-                                                                        .cast::<*mut u8>();
-                                                                    let l51 = *base
-                                                                        .add(16)
-                                                                        .cast::<usize>();
-                                                                    _rt::cabi_dealloc(l50, l51, 1);
-                                                                }
-                                                                1 => {
                                                                     let l52 = *base
                                                                         .add(12)
                                                                         .cast::<*mut u8>();
@@ -10133,22 +10357,22 @@ pub mod exports {
                                                                         .cast::<usize>();
                                                                     _rt::cabi_dealloc(l52, l53, 1);
                                                                 }
+                                                                1 => {
+                                                                    let l54 = *base
+                                                                        .add(12)
+                                                                        .cast::<*mut u8>();
+                                                                    let l55 = *base
+                                                                        .add(16)
+                                                                        .cast::<usize>();
+                                                                    _rt::cabi_dealloc(l54, l55, 1);
+                                                                }
                                                                 _ => (),
                                                             }
-                                                            let l54 = i32::from(
+                                                            let l56 = i32::from(
                                                                 *base.add(20).cast::<u8>(),
                                                             );
-                                                            match l54 {
+                                                            match l56 {
                                                                 0 => {
-                                                                    let l55 = *base
-                                                                        .add(24)
-                                                                        .cast::<*mut u8>();
-                                                                    let l56 = *base
-                                                                        .add(28)
-                                                                        .cast::<usize>();
-                                                                    _rt::cabi_dealloc(l55, l56, 1);
-                                                                }
-                                                                1 => {
                                                                     let l57 = *base
                                                                         .add(24)
                                                                         .cast::<*mut u8>();
@@ -10156,6 +10380,15 @@ pub mod exports {
                                                                         .add(28)
                                                                         .cast::<usize>();
                                                                     _rt::cabi_dealloc(l57, l58, 1);
+                                                                }
+                                                                1 => {
+                                                                    let l59 = *base
+                                                                        .add(24)
+                                                                        .cast::<*mut u8>();
+                                                                    let l60 = *base
+                                                                        .add(28)
+                                                                        .cast::<usize>();
+                                                                    _rt::cabi_dealloc(l59, l60, 1);
                                                                 }
                                                                 _ => (),
                                                             }
@@ -10166,57 +10399,63 @@ pub mod exports {
                                                         34 => (),
                                                         35 => (),
                                                         36 => {
-                                                            let l59 =
-                                                                *base.add(8).cast::<*mut u8>();
-                                                            let l60 = *base.add(12).cast::<usize>();
-                                                            _rt::cabi_dealloc(l59, l60, 1);
                                                             let l61 =
-                                                                *base.add(16).cast::<*mut u8>();
-                                                            let l62 = *base.add(20).cast::<usize>();
+                                                                *base.add(8).cast::<*mut u8>();
+                                                            let l62 = *base.add(12).cast::<usize>();
                                                             _rt::cabi_dealloc(l61, l62, 1);
+                                                            let l63 =
+                                                                *base.add(16).cast::<*mut u8>();
+                                                            let l64 = *base.add(20).cast::<usize>();
+                                                            _rt::cabi_dealloc(l63, l64, 1);
                                                         }
                                                         37 => {
-                                                            let l63 =
-                                                                *base.add(8).cast::<*mut u8>();
-                                                            let l64 = *base.add(12).cast::<usize>();
-                                                            _rt::cabi_dealloc(l63, l64, 1);
                                                             let l65 =
+                                                                *base.add(8).cast::<*mut u8>();
+                                                            let l66 = *base.add(12).cast::<usize>();
+                                                            _rt::cabi_dealloc(l65, l66, 1);
+                                                            let l67 =
                                                                 *base.add(16).cast::<*mut u8>();
-                                                            let l66 = *base.add(20).cast::<usize>();
-                                                            let base67 = l65;
-                                                            let len67 = l66;
-                                                            _rt::cabi_dealloc(base67, len67 * 4, 4);
+                                                            let l68 = *base.add(20).cast::<usize>();
+                                                            let base69 = l67;
+                                                            let len69 = l68;
+                                                            _rt::cabi_dealloc(base69, len69 * 4, 4);
                                                         }
                                                         38 => {
-                                                            let l68 =
-                                                                *base.add(8).cast::<*mut u8>();
-                                                            let l69 = *base.add(12).cast::<usize>();
-                                                            _rt::cabi_dealloc(l68, l69, 1);
-                                                        }
-                                                        39 => {
                                                             let l70 =
                                                                 *base.add(8).cast::<*mut u8>();
                                                             let l71 = *base.add(12).cast::<usize>();
-                                                            let base72 = l70;
-                                                            let len72 = l71;
-                                                            _rt::cabi_dealloc(base72, len72 * 4, 4);
+                                                            _rt::cabi_dealloc(l70, l71, 1);
+                                                        }
+                                                        39 => {
+                                                            let l72 =
+                                                                *base.add(8).cast::<*mut u8>();
+                                                            let l73 = *base.add(12).cast::<usize>();
+                                                            _rt::cabi_dealloc(l72, l73, 1);
+                                                        }
+                                                        40 => {
+                                                            let l74 =
+                                                                *base.add(8).cast::<*mut u8>();
+                                                            let l75 = *base.add(12).cast::<usize>();
+                                                            let base76 = l74;
+                                                            let len76 = l75;
+                                                            _rt::cabi_dealloc(base76, len76 * 4, 4);
                                                         }
                                                         _ => (),
                                                     }
                                                 }
                                             }
-                                            _rt::cabi_dealloc(base75, len75 * 56, 8);
+                                            _rt::cabi_dealloc(base79, len79 * 56, 8);
                                         }
                                     }
-                                    _rt::cabi_dealloc(base78, len78 * 8, 4);
+                                    _rt::cabi_dealloc(base82, len82 * 8, 4);
                                 }
                             }
-                            _rt::cabi_dealloc(base81, len81 * 8, 4);
+                            _rt::cabi_dealloc(base85, len85 * 8, 4);
                         }
                         _ => {
-                            let l82 = *arg0.add(4).cast::<*mut u8>();
-                            let l83 = *arg0.add(8).cast::<usize>();
-                            _rt::cabi_dealloc(l82, l83, 1);
+                            let l86 = *arg0.add(4).cast::<*mut u8>();
+                            let l87 = *arg0.add(8).cast::<usize>();
+                            _rt::cabi_dealloc(l86, l87, 1);
                         }
                     }
                 }
@@ -10605,9 +10844,9 @@ pub(crate) use __export_rdbms_service_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.25.0:rdbms-service:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 4740] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x80$\x01A\x02\x01A\x0a\
-\x01Bg\x01y\x04\0\x0anode-index\x03\0\0\x01q\x05\x12connection-failure\x01s\0\x17\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 4915] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xaf%\x01A\x02\x01A\x0a\
+\x01Bo\x01y\x04\0\x0anode-index\x03\0\0\x01q\x05\x12connection-failure\x01s\0\x17\
 query-parameter-failure\x01s\0\x17query-execution-failure\x01s\0\x16query-respon\
 se-failure\x01s\0\x05other\x01s\0\x04\0\x05error\x03\0\x02\x01r\x02\x09high-bits\
 w\x08low-bitsw\x04\0\x04uuid\x03\0\x04\x01o\x04}}}}\x01o\x08{{{{{{{{\x01q\x02\x04\
@@ -10633,36 +10872,40 @@ s\x04\0\x10enumeration-type\x03\01\x01r\x02\x04names\x05values\x04\0\x0benumerat
 ion\x03\03\x01o\x02s\x01\x01p5\x01r\x02\x04names\x0aattributes6\x04\0\x0ecomposi\
 te-type\x03\07\x01p\x01\x01r\x02\x04names\x06values9\x04\0\x09composite\x03\0:\x01\
 r\x02\x04names\x09base-type\x01\x04\0\x0bdomain-type\x03\0<\x01r\x02\x04names\x05\
-value\x01\x04\0\x06domain\x03\0>\x01q(\x09character\0\0\x04int2\0\0\x04int4\0\0\x04\
-int8\0\0\x06float4\0\0\x06float8\0\0\x07numeric\0\0\x07boolean\0\0\x04text\0\0\x07\
-varchar\0\0\x06bpchar\0\0\x09timestamp\0\0\x0btimestamptz\0\0\x04date\0\0\x04tim\
-e\0\0\x06timetz\0\0\x08interval\0\0\x05bytea\0\0\x04uuid\0\0\x03xml\0\0\x04json\0\
-\0\x05jsonb\0\0\x08jsonpath\0\0\x04inet\0\0\x04cidr\0\0\x07macaddr\0\0\x03bit\0\0\
-\x06varbit\0\0\x09int4range\0\0\x09int8range\0\0\x08numrange\0\0\x07tsrange\0\0\x09\
-tstzrange\0\0\x09daterange\0\0\x05money\0\0\x03oid\0\0\x0benumeration\x012\0\x09\
-composite\x018\0\x06domain\x01=\0\x05array\x01\x01\0\x04\0\x13db-column-type-nod\
-e\x03\0@\x01p\xc1\0\x01r\x01\x05nodes\xc2\0\x04\0\x0edb-column-type\x03\0C\x01p}\
-\x01p\x7f\x01q)\x09character\x01~\0\x04int2\x01|\0\x04int4\x01z\0\x04int8\x01x\0\
-\x06float4\x01v\0\x06float8\x01u\0\x07numeric\x01s\0\x07boolean\x01\x7f\0\x04tex\
-t\x01s\0\x07varchar\x01s\0\x06bpchar\x01s\0\x09timestamp\x01\x12\0\x0btimestampt\
-z\x01\x14\0\x04date\x01\x0e\0\x04time\x01\x10\0\x06timetz\x01\x16\0\x08interval\x01\
-\x18\0\x05bytea\x01\xc5\0\0\x04json\x01s\0\x05jsonb\x01s\0\x08jsonpath\x01s\0\x03\
-xml\x01s\0\x04uuid\x01\x05\0\x04inet\x01\x09\0\x04cidr\x01\x09\0\x07macaddr\x01\x0c\
-\0\x03bit\x01\xc6\0\0\x06varbit\x01\xc6\0\0\x09int4range\x01&\0\x09int8range\x01\
-(\0\x08numrange\x01*\0\x07tsrange\x01,\0\x09tstzrange\x01.\0\x09daterange\x010\0\
-\x05money\x01x\0\x03oid\x01y\0\x0benumeration\x014\0\x09composite\x01;\0\x06doma\
-in\x01?\0\x05array\x019\0\x04null\0\0\x04\0\x0ddb-value-node\x03\0G\x01p\xc8\0\x01\
-r\x01\x05nodes\xc9\0\x04\0\x08db-value\x03\0J\x01r\x04\x07ordinalw\x04names\x07d\
-b-type\xc4\0\x0cdb-type-names\x04\0\x09db-column\x03\0L\x01p\xcb\0\x01r\x01\x06v\
-alues\xce\0\x04\0\x06db-row\x03\0O\x04\0\x0ddb-result-set\x03\x01\x04\0\x0ddb-co\
-nnection\x03\x01\x01hQ\x01p\xcd\0\x01@\x01\x04self\xd3\0\0\xd4\0\x04\0![method]d\
-b-result-set.get-columns\x01U\x01p\xd0\0\x01k\xd6\0\x01@\x01\x04self\xd3\0\0\xd7\
-\0\x04\0\x1e[method]db-result-set.get-next\x01X\x01iR\x01j\x01\xd9\0\x01\x03\x01\
-@\x01\x07addresss\0\xda\0\x04\0\x1a[static]db-connection.open\x01[\x01hR\x01iQ\x01\
-j\x01\xdd\0\x01\x03\x01@\x03\x04self\xdc\0\x09statements\x06params\xce\0\0\xde\0\
-\x04\0\x1b[method]db-connection.query\x01_\x01j\x01w\x01\x03\x01@\x03\x04self\xdc\
-\0\x09statements\x06params\xce\0\0\xe0\0\x04\0\x1d[method]db-connection.execute\x01\
-a\x03\x01\x19wasi:rdbms/postgres@0.0.1\x05\0\x01B)\x01q\x05\x12connection-failur\
+value\x01\x04\0\x06domain\x03\0>\x01r\x02\x04names\x09base-type\x01\x04\0\x0aran\
+ge-type\x03\0@\x01q\x03\x08included\x01\x01\0\x08excluded\x01\x01\0\x09unbounded\
+\0\0\x04\0\x0bvalue-bound\x03\0B\x01r\x02\x05start\xc3\0\x03end\xc3\0\x04\0\x0cv\
+alues-range\x03\0D\x01r\x02\x04names\x05value\xc5\0\x04\0\x05range\x03\0F\x01q)\x09\
+character\0\0\x04int2\0\0\x04int4\0\0\x04int8\0\0\x06float4\0\0\x06float8\0\0\x07\
+numeric\0\0\x07boolean\0\0\x04text\0\0\x07varchar\0\0\x06bpchar\0\0\x09timestamp\
+\0\0\x0btimestamptz\0\0\x04date\0\0\x04time\0\0\x06timetz\0\0\x08interval\0\0\x05\
+bytea\0\0\x04uuid\0\0\x03xml\0\0\x04json\0\0\x05jsonb\0\0\x08jsonpath\0\0\x04ine\
+t\0\0\x04cidr\0\0\x07macaddr\0\0\x03bit\0\0\x06varbit\0\0\x09int4range\0\0\x09in\
+t8range\0\0\x08numrange\0\0\x07tsrange\0\0\x09tstzrange\0\0\x09daterange\0\0\x05\
+money\0\0\x03oid\0\0\x0benumeration\x012\0\x09composite\x018\0\x06domain\x01=\0\x05\
+range\x01\xc1\0\0\x05array\x01\x01\0\x04\0\x13db-column-type-node\x03\0H\x01p\xc9\
+\0\x01r\x01\x05nodes\xca\0\x04\0\x0edb-column-type\x03\0K\x01p}\x01p\x7f\x01q*\x09\
+character\x01~\0\x04int2\x01|\0\x04int4\x01z\0\x04int8\x01x\0\x06float4\x01v\0\x06\
+float8\x01u\0\x07numeric\x01s\0\x07boolean\x01\x7f\0\x04text\x01s\0\x07varchar\x01\
+s\0\x06bpchar\x01s\0\x09timestamp\x01\x12\0\x0btimestamptz\x01\x14\0\x04date\x01\
+\x0e\0\x04time\x01\x10\0\x06timetz\x01\x16\0\x08interval\x01\x18\0\x05bytea\x01\xcd\
+\0\0\x04json\x01s\0\x05jsonb\x01s\0\x08jsonpath\x01s\0\x03xml\x01s\0\x04uuid\x01\
+\x05\0\x04inet\x01\x09\0\x04cidr\x01\x09\0\x07macaddr\x01\x0c\0\x03bit\x01\xce\0\
+\0\x06varbit\x01\xce\0\0\x09int4range\x01&\0\x09int8range\x01(\0\x08numrange\x01\
+*\0\x07tsrange\x01,\0\x09tstzrange\x01.\0\x09daterange\x010\0\x05money\x01x\0\x03\
+oid\x01y\0\x0benumeration\x014\0\x09composite\x01;\0\x06domain\x01?\0\x05range\x01\
+\xc7\0\0\x05array\x019\0\x04null\0\0\x04\0\x0ddb-value-node\x03\0O\x01p\xd0\0\x01\
+r\x01\x05nodes\xd1\0\x04\0\x08db-value\x03\0R\x01r\x04\x07ordinalw\x04names\x07d\
+b-type\xcc\0\x0cdb-type-names\x04\0\x09db-column\x03\0T\x01p\xd3\0\x01r\x01\x06v\
+alues\xd6\0\x04\0\x06db-row\x03\0W\x04\0\x0ddb-result-set\x03\x01\x04\0\x0ddb-co\
+nnection\x03\x01\x01hY\x01p\xd5\0\x01@\x01\x04self\xdb\0\0\xdc\0\x04\0![method]d\
+b-result-set.get-columns\x01]\x01p\xd8\0\x01k\xde\0\x01@\x01\x04self\xdb\0\0\xdf\
+\0\x04\0\x1e[method]db-result-set.get-next\x01`\x01iZ\x01j\x01\xe1\0\x01\x03\x01\
+@\x01\x07addresss\0\xe2\0\x04\0\x1a[static]db-connection.open\x01c\x01hZ\x01iY\x01\
+j\x01\xe5\0\x01\x03\x01@\x03\x04self\xe4\0\x09statements\x06params\xd6\0\0\xe6\0\
+\x04\0\x1b[method]db-connection.query\x01g\x01j\x01w\x01\x03\x01@\x03\x04self\xe4\
+\0\x09statements\x06params\xd6\0\0\xe8\0\x04\0\x1d[method]db-connection.execute\x01\
+i\x03\x01\x19wasi:rdbms/postgres@0.0.1\x05\0\x01B)\x01q\x05\x12connection-failur\
 e\x01s\0\x17query-parameter-failure\x01s\0\x17query-execution-failure\x01s\0\x16\
 query-response-failure\x01s\0\x05other\x01s\0\x04\0\x05error\x03\0\0\x01r\x03\x04\
 yearz\x05month}\x03day}\x04\0\x04date\x03\0\x02\x01r\x04\x04hour}\x06minute}\x06\
