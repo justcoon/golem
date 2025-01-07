@@ -15,7 +15,7 @@
 use crate::services::golem_config::{RdbmsConfig, RdbmsPoolConfig};
 use crate::services::rdbms::postgres::types::{
     Composite, CompositeType, DbColumn, DbColumnType, DbValue, Domain, DomainType, Enum, EnumType,
-    Interval, NamedType, RangeType, TimeTz, ValuesRange,
+    Interval, NamedType, Range, RangeType, TimeTz, ValuesRange,
 };
 use crate::services::rdbms::postgres::{PostgresType, POSTGRES};
 use crate::services::rdbms::sqlx_common::{
@@ -31,6 +31,7 @@ use serde_json::json;
 use sqlx::postgres::types::{Oid, PgInterval, PgMoney, PgRange, PgTimeTz};
 use sqlx::postgres::{PgConnectOptions, PgTypeKind};
 use sqlx::{Column, ConnectOptions, Pool, Row, Type, TypeInfo, ValueRef};
+use std::collections::Bound;
 use std::net::IpAddr;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -130,63 +131,80 @@ impl<'q> QueryParamsBinder<'q, PostgresType, sqlx::Postgres>
     }
 }
 
-trait EncodeAndType<'a>: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> {}
+// // trait EncodeAndType<'a>: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Sized {}
+//
+//
+// struct EncodeAndType<'a, T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Sized> {
+//     value: Box<T>,
+// }
+//
+// impl<'a, T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Sized> EncodeAndType<'a, T> {
+//     fn new(value: T) -> Self {
+//         Self {
+//             value: Box::new(value),
+//         }
+//     }
+// }
+//
+// fn get_plain_value<'a, T>(value: DbValue) -> Result<EncodeAndType<'a, T>, String>
+// where T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Sized
+// {
+//     match value {
+//         DbValue::Character(v) => {
+//
+//             Ok(EncodeAndType::new(v))
+//         },
+//         DbValue::Int2(v) => {
+//             Ok(EncodeAndType::new(v))
+//         },
+//         DbValue::Int4(v) => Ok(EncodeAndType::new(v)),
+//         DbValue::Int8(v) => Ok(EncodeAndType::new(v)),
+//         // DbValue::Float4(v) => Ok(Box::new(v)),
+//         // DbValue::Float8(v) => Ok(Box::new(v)),
+//         // DbValue::Numeric(v) => Ok(Box::new(v)),
+//         // DbValue::Boolean(v) => Ok(Box::new(v)),
+//         // DbValue::Text(v) => Ok(Box::new(v)),
+//         // DbValue::Varchar(v) => Ok(Box::new(v)),
+//         // DbValue::Bpchar(v) => Ok(Box::new(v)),
+//         // DbValue::Bytea(v) => Ok(Box::new(v)),
+//         // DbValue::Uuid(v) => Ok(Box::new(v)),
+//         // DbValue::Json(v) => Ok(Box::new(v)),
+//         // DbValue::Jsonb(v) => Ok(Box::new(v)),
+//         // DbValue::Jsonpath(v) => Ok(Box::new(PgJsonPath(v))),
+//         // DbValue::Xml(v) => Ok(Box::new(PgXml(v))),
+//         // DbValue::Timestamp(v) => Ok(Box::new(v)),
+//         // DbValue::Timestamptz(v) => Ok(Box::new(v)),
+//         // DbValue::Time(v) => Ok(Box::new(v)),
+//         // DbValue::Timetz(v) => Ok(Box::new(PgTimeTz::from(v))),
+//         // DbValue::Date(v) => Ok(Box::new(v)),
+//         // DbValue::Interval(v) => Ok(Box::new(PgInterval::from(v))),
+//         // DbValue::Inet(v) => Ok(Box::new(v)),
+//         // DbValue::Cidr(v) => Ok(Box::new(v)),
+//         // DbValue::Macaddr(v) => Ok(Box::new(v)),
+//         // DbValue::Bit(v) => Ok(Box::new(v)),
+//         // DbValue::Varbit(v) => Ok(Box::new(v)),
+//         // DbValue::Int4range(v) => Ok(Box::new(PgRange::from(v))),
+//         // DbValue::Int8range(v) => Ok(Box::new(PgRange::from(v))),
+//         // DbValue::Numrange(v) => Ok(Box::new(PgRange::from(v))),
+//         // DbValue::Tsrange(v) => Ok(Box::new(PgRange::from(v))),
+//         // DbValue::Tstzrange(v) => Ok(Box::new(PgRange::from(v))),
+//         // DbValue::Daterange(v) => Ok(Box::new(PgRange::from(v))),
+//         // DbValue::Money(v) => Ok(Box::new(PgMoney(v))),
+//         // DbValue::Oid(v) => Ok(Box::new(Oid(v))),
+//         // DbValue::Enum(v) => Ok(Box::new(v)),
+//         // DbValue::Composite(v) => Ok(Box::new(v)),
+//         // DbValue::Domain(v) => Ok(Box::new(v)),
+//         // // DbValue::Range(v) => todo!(),
+//         // DbValue::Array(vs) => get_plain_value_array(vs),
+//         DbValue::Null => Ok(EncodeAndType::new(PgNull {})),
+//         _ => Err("Err".to_string())
+//     }
+// }
 
-fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, String>
-{
-    match value {
-        DbValue::Character(v) => Ok(Box::new(v)),
-        DbValue::Int2(v) => Ok(Box::new(v)),
-        DbValue::Int4(v) => Ok(Box::new(v)),
-        DbValue::Int8(v) => Ok(Box::new(v)),
-        // DbValue::Float4(v) => Ok(v),
-        // DbValue::Float8(v) => Ok(v),
-        // DbValue::Numeric(v) => Ok(v),
-        // DbValue::Boolean(v) => Ok(v),
-        // DbValue::Text(v) => Ok(v),
-        // DbValue::Varchar(v) => Ok(v),
-        // DbValue::Bpchar(v) => Ok(v),
-        // DbValue::Bytea(v) => Ok(v),
-        // DbValue::Uuid(v) => Ok(v),
-        // DbValue::Json(v) => Ok(v),
-        // DbValue::Jsonb(v) => Ok(v),
-        // DbValue::Jsonpath(v) => Ok(PgJsonPath(v)),
-        // DbValue::Xml(v) => Ok(PgXml(v)),
-        // DbValue::Timestamp(v) => Ok(v),
-        // DbValue::Timestamptz(v) => Ok(v),
-        // DbValue::Time(v) => Ok(v),
-        // DbValue::Timetz(v) => Ok(PgTimeTz::from(v)),
-        // DbValue::Date(v) => Ok(v),
-        // DbValue::Interval(v) => Ok(PgInterval::from(v)),
-        // DbValue::Inet(v) => Ok(v),
-        // DbValue::Cidr(v) => Ok(v),
-        // DbValue::Macaddr(v) => Ok(v),
-        // DbValue::Bit(v) => Ok(v),
-        // DbValue::Varbit(v) => Ok(v),
-        // DbValue::Int4range(v) => Ok(PgRange::from(v)),
-        // DbValue::Int8range(v) => Ok(PgRange::from(v)),
-        // DbValue::Numrange(v) => Ok(PgRange::from(v)),
-        // DbValue::Tsrange(v) => Ok(PgRange::from(v)),
-        // DbValue::Tstzrange(v) => Ok(PgRange::from(v)),
-        // DbValue::Daterange(v) => Ok(PgRange::from(v)),
-        // DbValue::Money(v) => Ok(PgMoney(v)),
-        // DbValue::Oid(v) => Ok(Oid(v)),
-        // DbValue::Enum(v) => Ok(v),
-        // DbValue::Composite(v) => Ok(v),
-        // DbValue::Domain(v) => Ok(v),
-        // DbValue::Range(v) => todo!(),
-        // DbValue::Array(vs) => get_plain_value_array(vs),
-        // DbValue::Null => Ok(PgNull {}) ,
-        _ => Err("Err".to_string())
-    }
-}
-
-// fn get_plain_value_array<'a>(values: Vec<DbValue>) -> Result<impl sqlx::Encode<'a, sqlx::Postgres>  + Type<sqlx::Postgres>, String>
-// // where
-// //     T: 'a + sqlx::Encode<'a, sqlx::Postgres> + Type<sqlx::Postgres>,
+// fn get_plain_value_array<'a>(values: Vec<DbValue>) -> Result<Box<dyn EncodeAndType<'a>>, String>
 // {
 //     if values.is_empty() {
-//         Ok(PgNull {})
+//         Ok(Box::new(PgNull {}))
 //     } else {
 //         let first = &values[0];
 //         match first {
@@ -198,7 +216,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Int2(_) => {
 //                 let values: Vec<i16> = get_plain_values(values, |v| {
@@ -208,7 +226,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Int4(_) => {
 //                 let values: Vec<i32> = get_plain_values(values, |v| {
@@ -218,7 +236,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Int8(_) => {
 //                 let values: Vec<i64> = get_plain_values(values, |v| {
@@ -228,7 +246,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Numeric(_) => {
 //                 let values: Vec<BigDecimal> = get_plain_values(values, |v| {
@@ -238,7 +256,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Float4(_) => {
 //                 let values: Vec<f32> = get_plain_values(values, |v| {
@@ -248,7 +266,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //
 //             DbValue::Float8(_) => {
@@ -259,7 +277,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Boolean(_) => {
 //                 let values: Vec<bool> = get_plain_values(values, |v| {
@@ -269,7 +287,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Text(_) => {
 //                 let values: Vec<String> = get_plain_values(values, |v| {
@@ -279,7 +297,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Varchar(_) => {
 //                 let values: Vec<String> = get_plain_values(values, |v| {
@@ -289,7 +307,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Bpchar(_) => {
 //                 let values: Vec<String> = get_plain_values(values, |v| {
@@ -299,7 +317,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Bytea(_) => {
 //                 let values: Vec<Vec<u8>> = get_plain_values(values, |v| {
@@ -309,7 +327,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Uuid(_) => {
 //                 let values: Vec<Uuid> = get_plain_values(values, |v| {
@@ -319,7 +337,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Json(_) => {
 //                 let values: Vec<serde_json::Value> = get_plain_values(values, |v| {
@@ -329,7 +347,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Jsonb(_) => {
 //                 let values: Vec<serde_json::Value> = get_plain_values(values, |v| {
@@ -339,7 +357,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Jsonpath(_) => {
 //                 let values: Vec<PgJsonPath> = get_plain_values(values, |v| {
@@ -349,7 +367,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Xml(_) => {
 //                 let values: Vec<PgXml> = get_plain_values(values, |v| {
@@ -359,7 +377,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Timestamptz(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -369,7 +387,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Timestamp(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -379,7 +397,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Date(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -389,7 +407,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Time(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -399,7 +417,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Timetz(_) => {
 //                 let values: Vec<PgTimeTz> = get_plain_values(values, |v| {
@@ -409,7 +427,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Interval(_) => {
 //                 let values: Vec<PgInterval> = get_plain_values(values, |v| {
@@ -419,7 +437,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Inet(_) => {
 //                 let values: Vec<IpAddr> = get_plain_values(values, |v| {
@@ -429,7 +447,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Cidr(_) => {
 //                 let values: Vec<IpAddr> = get_plain_values(values, |v| {
@@ -439,7 +457,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Macaddr(_) => {
 //                 let values: Vec<MacAddress> = get_plain_values(values, |v| {
@@ -449,7 +467,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Bit(_) => {
 //                 let values: Vec<BitVec> = get_plain_values(values, |v| {
@@ -459,7 +477,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Varbit(_) => {
 //                 let values: Vec<BitVec> = get_plain_values(values, |v| {
@@ -469,7 +487,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Int4range(_) => {
 //                 let values: Vec<PgRange<i32>> = get_plain_values(values, |v| {
@@ -479,7 +497,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Int8range(_) => {
 //                 let values: Vec<PgRange<i64>> = get_plain_values(values, |v| {
@@ -489,7 +507,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Numrange(_) => {
 //                 let values: Vec<PgRange<BigDecimal>> = get_plain_values(values, |v| {
@@ -499,7 +517,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Tsrange(_) => {
 //                 let values: Vec<PgRange<chrono::NaiveDateTime>> = get_plain_values(values, |v| {
@@ -509,7 +527,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Tstzrange(_) => {
 //                 let values: Vec<PgRange<chrono::DateTime<chrono::Utc>>> =
@@ -520,7 +538,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                             None
 //                         }
 //                     })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Daterange(_) => {
 //                 let values: Vec<PgRange<chrono::NaiveDate>> = get_plain_values(values, |v| {
@@ -530,7 +548,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Oid(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -540,7 +558,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Money(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -550,7 +568,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(values)
+//                 Ok(Box::new(values))
 //             }
 //             DbValue::Enum(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -560,7 +578,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(PgEnums(values))
+//                 Ok(Box::new(PgEnums(values)))
 //             }
 //             DbValue::Composite(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -570,7 +588,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(PgComposites(values))
+//                 Ok(Box::new(PgComposites(values)))
 //             }
 //             DbValue::Domain(_) => {
 //                 let values: Vec<_> = get_plain_values(values, |v| {
@@ -580,7 +598,7 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //                         None
 //                     }
 //                 })?;
-//                 Ok(PgDomains(values))
+//                 Ok(Box::new(PgDomains(values)))
 //             }
 //             DbValue::Range(_) => {
 //                 todo!()
@@ -594,10 +612,10 @@ fn get_plain_value<'a>(value: DbValue) -> Result<Box<dyn EncodeAndType<'a>>, Str
 //     }
 // }
 //
-fn set_value2<'a, S: PgValueSetter<'a>>(setter: &mut S, value: DbValue) -> Result<(), String> {
-    let v = get_plain_value(value)?;
-    setter.try_set_value(*v)
-}
+// fn set_value2<'a, S: PgValueSetter<'a>>(setter: &mut S, value: DbValue) -> Result<(), String> {
+//     let v = get_plain_value(value)?;
+//     setter.try_set_value(*(v.value))
+// }
 
 fn set_value<'a, S: PgValueSetter<'a>>(setter: &mut S, value: DbValue) -> Result<(), String> {
     match value {
@@ -1059,6 +1077,16 @@ fn set_value_array<'a, S: PgValueSetter<'a>>(
     }
 }
 
+// fn set_value_range<'a, S: PgValueSetter<'a>>(
+//     setter: &mut S,
+//     value: Range,
+// ) -> Result<(), String> {
+//     let first = value.value.start
+//     match first {
+//
+//     }
+// }
+
 fn get_plain_values<T>(
     values: Vec<DbValue>,
     f: impl Fn(DbValue) -> Option<T>,
@@ -1076,6 +1104,54 @@ fn get_plain_values<T>(
         }
     }
     Ok(result)
+}
+
+fn get_pg_range<T: Clone>(
+    value: Range,
+    f: impl Fn(DbValue) -> Option<T> + Clone,
+) -> Result<PgCustomRange<T>, String> {
+    fn to_value<T: Clone>(v: DbValue, f: impl Fn(DbValue) -> Option<T>) -> Result<T, String> {
+        if let Some(v) = f(v.clone()) {
+            Ok(v)
+        } else {
+            Err(format!(
+                "Bound element '{}' has different type than expected",
+                v
+            ))?
+        }
+    }
+
+    fn to_bound<T: Clone>(
+        v: Bound<DbValue>,
+        f: impl Fn(DbValue) -> Option<T>,
+    ) -> Result<Bound<T>, String> {
+        match v {
+            Bound::Included(v) => Ok(Bound::Included(to_value(v, f)?)),
+            Bound::Excluded(v) => Ok(Bound::Excluded(to_value(v, f)?)),
+            Bound::Unbounded => Ok(Bound::Unbounded),
+        }
+    }
+
+    let name = value.name;
+    let value = *value.value;
+
+    let start = to_bound(value.start, f.clone())?;
+    let end = to_bound(value.end, f.clone())?;
+
+    Ok(PgCustomRange::new(name, PgRange { start, end }))
+}
+
+fn get_range<T>(value: Option<PgCustomRange<T>>, f: impl Fn(T) -> DbValue + Clone) -> DbValue {
+    match value {
+        Some(value) => {
+            let name = value.name;
+            let start = value.value.start.map(f.clone());
+            let end = value.value.end.map(f.clone());
+            let value = ValuesRange { start, end };
+            DbValue::Range(Range::new(name, value))
+        }
+        None => DbValue::Null,
+    }
 }
 
 impl TryFrom<&sqlx::postgres::PgRow> for DbRow<DbValue> {
@@ -1260,7 +1336,7 @@ fn get_db_value<G: PgValueGetter>(
             let v: Option<Domain> = getter.try_get_value()?;
             DbValue::primitive_from(v.map(DbValue::Domain))
         }
-        DbColumnType::Range(_) => todo!(),
+        DbColumnType::Range(v) => get_db_value_range(&(*v.base_type), getter)?,
         DbColumnType::Array(v) => get_db_value_array(v, getter)?,
     };
     Ok(value)
@@ -1432,6 +1508,24 @@ fn get_db_value_array<G: PgValueGetter>(
             todo!()
         }
         DbColumnType::Array(_) => Err("Array of arrays is not supported".to_string())?,
+    };
+    Ok(value)
+}
+
+fn get_db_value_range<G: PgValueGetter>(
+    db_type: &DbColumnType,
+    getter: &mut G,
+) -> Result<DbValue, String> {
+    let value = match db_type {
+        DbColumnType::Float4 => {
+            let v: Option<PgCustomRange<f32>> = getter.try_get_value()?;
+            get_range(v, DbValue::Float4)
+        }
+        DbColumnType::Float8 => {
+            let v: Option<PgCustomRange<f64>> = getter.try_get_value()?;
+            get_range(v, DbValue::Float8)
+        }
+        _ => Err(format!("Range of {} is not supported", db_type))?,
     };
     Ok(value)
 }
@@ -1677,7 +1771,6 @@ impl<'a> PgValueSetter<'a> for sqlx::postgres::PgArgumentBuffer {
         Ok(())
     }
 }
-
 
 struct PgRowColumnValueGetter<'r> {
     index: usize,
@@ -2060,6 +2153,63 @@ fn get_array_pg_type_info<T: NamedType>(values: &[T]) -> Option<sqlx::postgres::
     }
 }
 
+struct PgCustomRange<T> {
+    name: String,
+    value: PgRange<T>,
+}
+
+impl<T> PgCustomRange<T> {
+    fn new(name: String, value: PgRange<T>) -> PgCustomRange<T> {
+        Self { name, value }
+    }
+}
+
+impl<T> sqlx::Type<sqlx::Postgres> for PgCustomRange<T> {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        sqlx::postgres::PgTypeInfo::with_oid(Oid(5080)) // pseudo type
+    }
+
+    fn compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
+        matches!(ty.kind(), PgTypeKind::Range(_))
+    }
+}
+
+impl<'q, T> sqlx::Encode<'q, sqlx::Postgres> for PgCustomRange<T>
+where
+    T: sqlx::Encode<'q, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
+{
+    fn encode_by_ref(
+        &self,
+        buf: &mut sqlx::postgres::PgArgumentBuffer,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        <PgRange<T> as sqlx::Encode<sqlx::Postgres>>::encode_by_ref(&self.value, buf)
+    }
+
+    fn produces(&self) -> Option<sqlx::postgres::PgTypeInfo> {
+        Some(sqlx::postgres::PgTypeInfo::with_name(
+            self.name.clone().leak(),
+        ))
+    }
+}
+
+impl<'r, T> sqlx::Decode<'r, sqlx::Postgres> for PgCustomRange<T>
+where
+    T: for<'a> sqlx::Decode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
+{
+    fn decode(
+        value: sqlx::postgres::PgValueRef<'r>,
+    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
+        let type_info = &value.type_info();
+        let name = type_info.name().to_string();
+        if let PgTypeKind::Range(_) = type_info.kind() {
+            let v = <PgRange<T> as sqlx::Decode<sqlx::Postgres>>::decode(value)?;
+            Ok(PgCustomRange::new(name, v))
+        } else {
+            Err(format!("Type '{}' is not supported", name).into())
+        }
+    }
+}
+
 fn get_db_column_type_attributes(
     attributes: Vec<(String, sqlx::postgres::PgTypeInfo)>,
 ) -> Result<Vec<(String, DbColumnType)>, String> {
@@ -2075,13 +2225,17 @@ fn get_db_column_type_attributes(
 
 fn get_db_type_name(type_info: &sqlx::postgres::PgTypeInfo) -> String {
     match type_info.kind() {
-        PgTypeKind::Enum(_) | PgTypeKind::Composite(_) | PgTypeKind::Domain(_) => {
-            type_info.name().to_string()
-        }
+        PgTypeKind::Enum(_)
+        | PgTypeKind::Composite(_)
+        | PgTypeKind::Domain(_)
+        | PgTypeKind::Range(_) => type_info.name().to_string(),
         PgTypeKind::Array(element_type)
             if matches!(
                 element_type.kind(),
-                PgTypeKind::Enum(_) | PgTypeKind::Composite(_) | PgTypeKind::Domain(_)
+                PgTypeKind::Enum(_)
+                    | PgTypeKind::Composite(_)
+                    | PgTypeKind::Domain(_)
+                    | PgTypeKind::Range(_)
             ) =>
         {
             format!("{}[]", element_type.name())

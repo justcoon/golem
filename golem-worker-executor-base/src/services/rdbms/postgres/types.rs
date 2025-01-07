@@ -528,7 +528,7 @@ impl DbValue {
     pub fn is_complex_type(&self) -> bool {
         matches!(
             self,
-            DbValue::Composite(_) | DbValue::Domain(_) | DbValue::Array(_)
+            DbValue::Composite(_) | DbValue::Domain(_) | DbValue::Array(_) | DbValue::Range(_)
         )
     }
 }
