@@ -144,6 +144,22 @@ impl<T> ValuesRange<T> {
     pub fn new(start: Bound<T>, end: Bound<T>) -> Self {
         ValuesRange { start, end }
     }
+
+    pub fn start_value(&self) -> Option<&T> {
+        match &self.start {
+            Bound::Included(v) => Some(v),
+            Bound::Excluded(v) => Some(v),
+            Bound::Unbounded => None,
+        }
+    }
+
+    pub fn end_value(&self) -> Option<&T> {
+        match &self.end {
+            Bound::Included(v) => Some(v),
+            Bound::Excluded(v) => Some(v),
+            Bound::Unbounded => None,
+        }
+    }
 }
 
 impl<T: Debug> Display for ValuesRange<T> {
