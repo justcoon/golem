@@ -355,6 +355,13 @@ async fn postgres_create_insert_select_test(
             CREATE DOMAIN posint4 AS INT4 CHECK (VALUE > 0);
         "#;
 
+    let create_float8range_type_statement = r#"
+            CREATE TYPE float8range AS RANGE (
+                subtype = float8,
+                subtype_diff = float8mi
+            );
+        "#;
+
     let create_table_statement = r#"
             CREATE TABLE data_types (
                 id VARCHAR(25) PRIMARY KEY,
@@ -397,7 +404,8 @@ async fn postgres_create_insert_select_test(
                 tsvector_col TSVECTOR,
                 tsquery_col TSQUERY,
                 inventory_item_col inventory_item,
-                posint4_col posint4
+                posint4_col posint4,
+                float8range_col float8range
             );
         "#;
 
@@ -409,6 +417,7 @@ async fn postgres_create_insert_select_test(
                 StatementTest::execute_test(create_enum_statement, vec![], None),
                 StatementTest::execute_test(create_composite_type_statement, vec![], None),
                 StatementTest::execute_test(create_domain_type_statement, vec![], None),
+                StatementTest::execute_test(create_float8range_type_statement, vec![], None),
                 StatementTest::execute_test(create_table_statement, vec![], None),
             ],
             None,
@@ -459,7 +468,8 @@ async fn postgres_create_insert_select_test(
             tsvector_col,
             tsquery_col,
             inventory_item_col,
-            posint4_col
+            posint4_col,
+            float8range_col
             )
             VALUES
             (
@@ -467,7 +477,7 @@ async fn postgres_create_insert_select_test(
                 $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
                 $20, $21, $22, $23, $24, $25, $26, $27, $28, $29,
                 $30, $31, $32, $33, $34, $35, $36, $37, $38::tsvector, $39::tsquery,
-                $40, $41
+                $40, $41, $42
             );
         "#;
 
@@ -600,9 +610,16 @@ async fn postgres_create_insert_select_test(
                     "posint4".to_string(),
                     postgres_types::DbValue::Int4(1 + i as i32),
                 )),
+                postgres_types::DbValue::Range(postgres_types::Range::new(
+                    "float8range".to_string(),
+                    postgres_types::ValuesRange::new(
+                        Bound::Included(postgres_types::DbValue::Float8(1.23)),
+                        Bound::Excluded(postgres_types::DbValue::Float8(4.55)),
+                    ),
+                )),
             ]);
         } else {
-            for _ in 0..40 {
+            for _ in 0..41 {
                 params.push(postgres_types::DbValue::Null);
             }
         }
@@ -891,6 +908,15 @@ async fn postgres_create_insert_select_test(
             db_type: postgres_types::DbColumnType::Int4,
             db_type_name: "INT4".to_string(),
         },
+        postgres_types::DbColumn {
+            name: "float8range_col".to_string(),
+            ordinal: 41,
+            db_type: postgres_types::DbColumnType::Range(postgres_types::RangeType::new(
+                "float8range".to_string(),
+                postgres_types::DbColumnType::Float8,
+            )),
+            db_type_name: "float8range".to_string(),
+        },
     ];
 
     let select_statement = r#"
@@ -935,7 +961,8 @@ async fn postgres_create_insert_select_test(
             tsvector_col::text,
             tsquery_col::text,
             inventory_item_col,
-            posint4_col
+            posint4_col,
+            float8range_col
            FROM data_types ORDER BY id ASC;
         "#;
 
