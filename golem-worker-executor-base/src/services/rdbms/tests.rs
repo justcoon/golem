@@ -2341,9 +2341,6 @@ async fn execute_rdbms_test<T: RdbmsType + Clone>(
                     results.push(result.map(StatementResult::Query));
                 }
                 StatementAction::QueryStream(_) => {
-                    // results.push(Err(Error::Other(
-                    //     "Query Stream is not supported for transactions".to_string(),
-                    // )));
                     match transaction.query_stream(st.statement, st.params).await {
                         Ok(result_set) => {
                             let result = DbResult::from(result_set).await;
@@ -2432,8 +2429,7 @@ fn check_test_results<T: RdbmsType + Clone>(
                             );
                         }
                     }
-                    v => {
-                        println!("execute result for worker {worker_id} and test statement with index {i} statement {} error {:?}", st.statement, v);
+                    _ => {
                         check!(false, "execute result for worker {worker_id} and test statement with index {i} is error or not found");
                     }
                 }
@@ -2450,8 +2446,7 @@ fn check_test_results<T: RdbmsType + Clone>(
                             check!(result.rows == expected_rows, "query result rows for worker {worker_id} and test statement with index {i} do not match");
                         }
                     }
-                    v => {
-                        println!("query result for worker {worker_id} and test statement with index {i} statement {} error {:?}", st.statement, v);
+                    _ => {
                         check!(false, "query result for worker {worker_id} and test statement with index {i} is error or not found");
                     }
                 }
@@ -2468,8 +2463,7 @@ fn check_test_results<T: RdbmsType + Clone>(
                             check!(result.rows == expected_rows, "query stream result rows for worker {worker_id} and test statement with index {i} do not match");
                         }
                     }
-                    v => {
-                        println!("query result for worker {worker_id} and test statement with index {i} statement {} error {:?}", st.statement, v);
+                    _ => {
                         check!(false, "query stream result for worker {worker_id} and test statement with index {i} is error or not found");
                     }
                 }

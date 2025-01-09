@@ -18,8 +18,8 @@ use crate::preview2::wasi::rdbms::postgres::{
     Composite, CompositeType, Datebound, Daterange, DbColumn, DbColumnType, DbResult, DbRow,
     DbValue, Domain, DomainType, Enumeration, EnumerationType, Error, Host, HostDbConnection,
     HostDbResultStream, HostDbTransaction, HostLazyDbColumnType, HostLazyDbValue, Int4bound,
-    Int4range, Int8bound, Int8range, Interval, Numbound, Numrange, Tsbound, Tsrange, Tstzbound,
-    Tstzrange,
+    Int4range, Int8bound, Int8range, Interval, Numbound, Numrange, Range, RangeType, Tsbound,
+    Tsrange, Tstzbound, Tstzrange, ValueBound, ValuesRange,
 };
 use crate::preview2::wasi::rdbms::types::Timetz;
 use crate::services::rdbms::postgres::types as postgres_types;
@@ -1246,26 +1246,46 @@ fn to_db_value(
                 DbValueResourceRep::Domain(v.value.rep()),
             )
         }
-        // DbValue::Range(v) => {
-        //
-        //     let start_value = resource_table
-        //         .get::<LazyDbValueEntry>(&v.value)
-        //         .map_err(|e| e.to_string())?
-        //         .value
-        //         .clone();
-        //     let end_value = resource_table
-        //         .get::<LazyDbValueEntry>(&v.value)
-        //         .map_err(|e| e.to_string())?
-        //         .value
-        //         .clone();
-        //     DbValueWithResourceRep::new(
-        //         postgres_types::DbValue::Range(postgres_types::Range::new(v.name, value.value)),
-        //         DbValueResourceRep::Range(v.value.rep()),
-        //     )
-        // }
+        DbValue::Range(v) => {
+            let (start_value, start_rep) = to_bound(v.value.start, resource_table)?;
+            let (end_value, end_rep) = to_bound(v.value.end, resource_table)?;
+
+            DbValueWithResourceRep::new(
+                postgres_types::DbValue::Range(postgres_types::Range::new(
+                    v.name,
+                    postgres_types::ValuesRange::new(start_value, end_value),
+                )),
+                DbValueResourceRep::Range((start_rep, end_rep)),
+            )
+        }
         DbValue::Null => Ok(DbValueWithResourceRep::new_resource_none(
             postgres_types::DbValue::Null,
         )),
+    }
+}
+
+fn to_bound(
+    value: ValueBound,
+    resource_table: &mut ResourceTable,
+) -> Result<(Bound<postgres_types::DbValue>, Option<u32>), String> {
+    match value {
+        ValueBound::Included(r) => {
+            let value = resource_table
+                .get::<LazyDbValueEntry>(&r)
+                .map_err(|e| e.to_string())?
+                .value
+                .clone();
+            Ok((Bound::Included(value.value), Some(r.rep())))
+        }
+        ValueBound::Excluded(r) => {
+            let value = resource_table
+                .get::<LazyDbValueEntry>(&r)
+                .map_err(|e| e.to_string())?
+                .value
+                .clone();
+            Ok((Bound::Excluded(value.value), Some(r.rep())))
+        }
+        ValueBound::Unbounded => Ok((Bound::Unbounded, None)),
     }
 }
 
@@ -1383,15 +1403,11 @@ fn from_db_value(
             let mut values: Vec<Resource<LazyDbValueEntry>> = Vec::with_capacity(v.values.len());
             let mut new_resource_reps: Vec<u32> = Vec::with_capacity(v.values.len());
             for (i, v) in v.values.into_iter().enumerate() {
-                let value = if let Some(r) = value.resource_rep.get_composite_rep(i) {
-                    Resource::new_own(r)
-                } else {
-                    resource_table
-                        .push(LazyDbValueEntry::new(
-                            DbValueWithResourceRep::new_resource_none(v),
-                        ))
-                        .map_err(|e| e.to_string())?
-                };
+                let value = get_db_value_resource(
+                    v,
+                    value.resource_rep.get_composite_rep(i),
+                    resource_table,
+                )?;
                 new_resource_reps.push(value.rep());
                 values.push(value);
             }
@@ -1404,15 +1420,11 @@ fn from_db_value(
             ))
         }
         postgres_types::DbValue::Domain(v) => {
-            let value = if let Some(r) = value.resource_rep.get_domain_rep() {
-                Resource::new_own(r)
-            } else {
-                resource_table
-                    .push(LazyDbValueEntry::new(
-                        DbValueWithResourceRep::new_resource_none(*v.value),
-                    ))
-                    .map_err(|e| e.to_string())?
-            };
+            let value = get_db_value_resource(
+                *v.value,
+                value.resource_rep.get_domain_rep(),
+                resource_table,
+            )?;
             let new_resource_rep = value.rep();
             Ok((
                 DbValue::Domain(Domain {
@@ -1426,15 +1438,8 @@ fn from_db_value(
             let mut values: Vec<Resource<LazyDbValueEntry>> = Vec::with_capacity(vs.len());
             let mut new_resource_reps: Vec<u32> = Vec::with_capacity(vs.len());
             for (i, v) in vs.into_iter().enumerate() {
-                let value = if let Some(r) = value.resource_rep.get_array_rep(i) {
-                    Resource::new_own(r)
-                } else {
-                    resource_table
-                        .push(LazyDbValueEntry::new(
-                            DbValueWithResourceRep::new_resource_none(v),
-                        ))
-                        .map_err(|e| e.to_string())?
-                };
+                let value =
+                    get_db_value_resource(v, value.resource_rep.get_array_rep(i), resource_table)?;
                 new_resource_reps.push(value.rep());
                 values.push(value);
             }
@@ -1444,31 +1449,57 @@ fn from_db_value(
                 DbValueResourceRep::Array(new_resource_reps),
             ))
         }
-        // postgres_types::DbValue::Range(v) => {
-        //
-        //     let s = *v.value.start;
-        //     let e = *v.value.end;
-        //
-        //     let value = if let Some(r) = value.resource_rep.get_range_rep() {
-        //         Resource::new_own(r)
-        //     } else {
-        //         resource_table
-        //             .push(LazyDbValueEntry::new(
-        //                 DbValueWithResourceRep::new_resource_none(s),
-        //             ))
-        //             .map_err(|e| e.to_string())?
-        //     };
-        //     let new_resource_rep = value.rep();
-        //     Ok((
-        //         DbValue::Domain(Domain {
-        //             name: v.name,
-        //             value,
-        //         }),
-        //         DbValueResourceRep::Domain(new_resource_rep),
-        //     ))
-        // }
-        postgres_types::DbValue::Range(_) => todo!(),
+        postgres_types::DbValue::Range(v) => {
+            let reps = value.resource_rep.get_range_rep();
+            let (start, start_rep) =
+                from_bound(v.value.start, reps.and_then(|r| r.0), resource_table)?;
+            let (end, end_rep) = from_bound(v.value.end, reps.and_then(|r| r.1), resource_table)?;
+            let value = ValuesRange { start, end };
+            Ok((
+                DbValue::Range(Range {
+                    name: v.name,
+                    value,
+                }),
+                DbValueResourceRep::Range((start_rep, end_rep)),
+            ))
+        }
         postgres_types::DbValue::Null => Ok((DbValue::Null, DbValueResourceRep::None)),
+    }
+}
+
+fn get_db_value_resource(
+    value: postgres_types::DbValue,
+    resource_rep: Option<u32>,
+    resource_table: &mut ResourceTable,
+) -> Result<Resource<LazyDbValueEntry>, String> {
+    if let Some(r) = resource_rep {
+        Ok(Resource::new_own(r))
+    } else {
+        resource_table
+            .push(LazyDbValueEntry::new(
+                DbValueWithResourceRep::new_resource_none(value),
+            ))
+            .map_err(|e| e.to_string())
+    }
+}
+
+fn from_bound(
+    bound: Bound<postgres_types::DbValue>,
+    resource_rep: Option<u32>,
+    resource_table: &mut ResourceTable,
+) -> Result<(ValueBound, Option<u32>), String> {
+    match bound {
+        Bound::Included(v) => {
+            let value = get_db_value_resource(v, resource_rep, resource_table)?;
+            let rep = value.rep();
+            Ok((ValueBound::Included(value), Some(rep)))
+        }
+        Bound::Excluded(v) => {
+            let value = get_db_value_resource(v, resource_rep, resource_table)?;
+            let rep = value.rep();
+            Ok((ValueBound::Excluded(value), Some(rep)))
+        }
+        Bound::Unbounded => Ok((ValueBound::Unbounded, None)),
     }
 }
 
@@ -1616,15 +1647,11 @@ fn from_db_column_type(
                 Vec::with_capacity(v.attributes.len());
             let mut new_resource_reps: Vec<u32> = Vec::with_capacity(v.attributes.len());
             for (i, (n, t)) in v.attributes.into_iter().enumerate() {
-                let value = if let Some(r) = value.resource_rep.get_composite_rep(i) {
-                    Resource::new_own(r)
-                } else {
-                    resource_table
-                        .push(LazyDbColumnTypeEntry::new(
-                            DbColumnTypeWithResourceRep::new_resource_none(t),
-                        ))
-                        .map_err(|e| e.to_string())?
-                };
+                let value = get_db_column_type_resource(
+                    t,
+                    value.resource_rep.get_composite_rep(i),
+                    resource_table,
+                )?;
                 new_resource_reps.push(value.rep());
                 attributes.push((n, value));
             }
@@ -1637,15 +1664,11 @@ fn from_db_column_type(
             ))
         }
         postgres_types::DbColumnType::Domain(v) => {
-            let value = if let Some(r) = value.resource_rep.get_domain_rep() {
-                Resource::new_own(r)
-            } else {
-                resource_table
-                    .push(LazyDbColumnTypeEntry::new(
-                        DbColumnTypeWithResourceRep::new_resource_none(*v.base_type),
-                    ))
-                    .map_err(|e| e.to_string())?
-            };
+            let value = get_db_column_type_resource(
+                *v.base_type,
+                value.resource_rep.get_domain_rep(),
+                resource_table,
+            )?;
             let new_resource_rep = value.rep();
             Ok((
                 DbColumnType::Domain(DomainType {
@@ -1656,41 +1679,48 @@ fn from_db_column_type(
             ))
         }
         postgres_types::DbColumnType::Array(v) => {
-            let value = if let Some(r) = value.resource_rep.get_array_rep() {
-                Resource::new_own(r)
-            } else {
-                resource_table
-                    .push(LazyDbColumnTypeEntry::new(
-                        DbColumnTypeWithResourceRep::new_resource_none(*v),
-                    ))
-                    .map_err(|e| e.to_string())?
-            };
+            let value = get_db_column_type_resource(
+                *v,
+                value.resource_rep.get_array_rep(),
+                resource_table,
+            )?;
             let new_resource_rep = value.rep();
             Ok((
                 DbColumnType::Array(value),
                 DbColumnTypeResourceRep::Array(new_resource_rep),
             ))
         }
-        // postgres_types::DbColumnType::Range(v) => {
-        //     let value = if let Some(r) = value.resource_rep.get_range_rep() {
-        //         Resource::new_own(r)
-        //     } else {
-        //         resource_table
-        //             .push(LazyDbColumnTypeEntry::new(
-        //                 DbColumnTypeWithResourceRep::new_resource_none(*v.base_type),
-        //             ))
-        //             .map_err(|e| e.to_string())?
-        //     };
-        //     let new_resource_rep = value.rep();
-        //     Ok((
-        //         DbColumnType::Range(RangeType {
-        //             name: v.name,
-        //             base_type: value,
-        //         }),
-        //         DbColumnTypeResourceRep::Range(new_resource_rep),
-        //     ))
-        // }
-        postgres_types::DbColumnType::Range(_) => todo!(),
+        postgres_types::DbColumnType::Range(v) => {
+            let value = get_db_column_type_resource(
+                *v.base_type,
+                value.resource_rep.get_range_rep(),
+                resource_table,
+            )?;
+            let new_resource_rep = value.rep();
+            Ok((
+                DbColumnType::Range(RangeType {
+                    name: v.name,
+                    base_type: value,
+                }),
+                DbColumnTypeResourceRep::Range(new_resource_rep),
+            ))
+        }
+    }
+}
+
+fn get_db_column_type_resource(
+    value: postgres_types::DbColumnType,
+    resource_rep: Option<u32>,
+    resource_table: &mut ResourceTable,
+) -> Result<Resource<LazyDbColumnTypeEntry>, String> {
+    if let Some(r) = resource_rep {
+        Ok(Resource::new_own(r))
+    } else {
+        resource_table
+            .push(LazyDbColumnTypeEntry::new(
+                DbColumnTypeWithResourceRep::new_resource_none(value),
+            ))
+            .map_err(|e| e.to_string())
     }
 }
 
@@ -1854,20 +1884,21 @@ fn to_db_column_type(
                 postgres_types::DbColumnType::Array(Box::new(value.value)),
                 DbColumnTypeResourceRep::Array(v.rep()),
             )
-        } // DbColumnType::Range(v) => {
-          //     let value = resource_table
-          //         .get::<LazyDbColumnTypeEntry>(&v.base_type)
-          //         .map_err(|e| e.to_string())?
-          //         .value
-          //         .clone();
-          //     DbColumnTypeWithResourceRep::new(
-          //         postgres_types::DbColumnType::Range(postgres_types::RangeType::new(
-          //             v.name,
-          //             value.value,
-          //         )),
-          //         DbColumnTypeResourceRep::Range(v.base_type.rep()),
-          //     )
-          // }
+        }
+        DbColumnType::Range(v) => {
+            let value = resource_table
+                .get::<LazyDbColumnTypeEntry>(&v.base_type)
+                .map_err(|e| e.to_string())?
+                .value
+                .clone();
+            DbColumnTypeWithResourceRep::new(
+                postgres_types::DbColumnType::Range(postgres_types::RangeType::new(
+                    v.name,
+                    value.value,
+                )),
+                DbColumnTypeResourceRep::Range(v.base_type.rep()),
+            )
+        }
     }
 }
 
