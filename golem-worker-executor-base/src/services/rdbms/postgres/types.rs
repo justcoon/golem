@@ -373,7 +373,10 @@ impl DbColumnType {
     pub fn is_complex_type(&self) -> bool {
         matches!(
             self,
-            DbColumnType::Composite(_) | DbColumnType::Domain(_) | DbColumnType::Array(_)
+            DbColumnType::Composite(_)
+                | DbColumnType::Domain(_)
+                | DbColumnType::Array(_)
+                | DbColumnType::Range(_)
         )
     }
 }
@@ -539,6 +542,13 @@ impl DbValue {
 
     pub(crate) fn primitive_from(value: Option<DbValue>) -> Self {
         value.unwrap_or(DbValue::Null)
+    }
+
+    pub(crate) fn primitive_from_plain<T>(value: Option<T>, f: impl Fn(T) -> DbValue) -> Self {
+        match value {
+            Some(v) => f(v),
+            None => DbValue::Null,
+        }
     }
 
     pub fn is_complex_type(&self) -> bool {

@@ -1006,6 +1006,12 @@ async fn postgres_create_insert_select_array_test(
             );
         "#;
 
+    let create_float4range_type_statement = r#"
+            CREATE TYPE float4range AS RANGE (
+                subtype = float4
+            );
+        "#;
+
     let create_domain_type_statement = r#"
             CREATE DOMAIN posint8 AS INT8 CHECK (VALUE > 0);
         "#;
@@ -1052,7 +1058,8 @@ async fn postgres_create_insert_select_array_test(
                 tsvector_col TSVECTOR[],
                 tsquery_col TSQUERY[],
                 inventory_item_col a_inventory_item[],
-                posint8_col posint8[]
+                posint8_col posint8[],
+                float4range_col float4range[]
             );
         "#;
 
@@ -1064,6 +1071,7 @@ async fn postgres_create_insert_select_array_test(
                 StatementTest::execute_test(create_enum_statement, vec![], None),
                 StatementTest::execute_test(create_composite_type_statement, vec![], None),
                 StatementTest::execute_test(create_domain_type_statement, vec![], None),
+                StatementTest::execute_test(create_float4range_type_statement, vec![], None),
                 StatementTest::execute_test(create_table_statement, vec![], None),
             ],
             None,
@@ -1114,7 +1122,8 @@ async fn postgres_create_insert_select_array_test(
             tsvector_col,
             tsquery_col,
             inventory_item_col,
-            posint8_col
+            posint8_col,
+            float4range_col
             )
             VALUES
             (
@@ -1122,7 +1131,7 @@ async fn postgres_create_insert_select_array_test(
                 $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
                 $20, $21, $22, $23, $24, $25, $26, $27, $28, $29,
                 $30, $31, $32, $33, $34, $35, $36, $37, $38::tsvector[], $39::tsquery[],
-                $40, $41
+                $40, $41, $42
             );
         "#;
 
@@ -1319,9 +1328,36 @@ async fn postgres_create_insert_select_array_test(
                         postgres_types::DbValue::Int8(2 + i as i64),
                     )),
                 ]),
+                postgres_types::DbValue::Array(vec![
+                    postgres_types::DbValue::Range(postgres_types::Range::new(
+                        "float4range".to_string(),
+                        postgres_types::ValuesRange::new(Bound::Unbounded, Bound::Unbounded),
+                    )),
+                    postgres_types::DbValue::Range(postgres_types::Range::new(
+                        "float4range".to_string(),
+                        postgres_types::ValuesRange::new(
+                            Bound::Unbounded,
+                            Bound::Excluded(postgres_types::DbValue::Float4(6.55)),
+                        ),
+                    )),
+                    postgres_types::DbValue::Range(postgres_types::Range::new(
+                        "float4range".to_string(),
+                        postgres_types::ValuesRange::new(
+                            Bound::Included(postgres_types::DbValue::Float4(2.23)),
+                            Bound::Excluded(postgres_types::DbValue::Float4(4.55)),
+                        ),
+                    )),
+                    postgres_types::DbValue::Range(postgres_types::Range::new(
+                        "float4range".to_string(),
+                        postgres_types::ValuesRange::new(
+                            Bound::Included(postgres_types::DbValue::Float4(1.23)),
+                            Bound::Unbounded,
+                        ),
+                    )),
+                ]),
             ]);
         } else {
-            for _ in 0..40 {
+            for _ in 0..41 {
                 params.push(postgres_types::DbValue::Array(vec![]));
             }
         }
@@ -1608,6 +1644,16 @@ async fn postgres_create_insert_select_array_test(
             .into_array(),
             db_type_name: "posint8[]".to_string(),
         },
+        postgres_types::DbColumn {
+            name: "float4range_col".to_string(),
+            ordinal: 41,
+            db_type: postgres_types::DbColumnType::Range(postgres_types::RangeType::new(
+                "float4range".to_string(),
+                postgres_types::DbColumnType::Float4,
+            ))
+            .into_array(),
+            db_type_name: "float4range[]".to_string(),
+        },
     ];
 
     let select_statement = r#"
@@ -1652,7 +1698,8 @@ async fn postgres_create_insert_select_array_test(
             tsvector_col::text[],
             tsquery_col::text[],
             inventory_item_col,
-            posint8_col
+            posint8_col,
+            float4range_col
            FROM array_data_types ORDER BY id ASC;
         "#;
 
@@ -2385,7 +2432,8 @@ fn check_test_results<T: RdbmsType + Clone>(
                             );
                         }
                     }
-                    _ => {
+                    v => {
+                        println!("execute result for worker {worker_id} and test statement with index {i} statement {} error {:?}", st.statement, v);
                         check!(false, "execute result for worker {worker_id} and test statement with index {i} is error or not found");
                     }
                 }
@@ -2402,7 +2450,8 @@ fn check_test_results<T: RdbmsType + Clone>(
                             check!(result.rows == expected_rows, "query result rows for worker {worker_id} and test statement with index {i} do not match");
                         }
                     }
-                    _ => {
+                    v => {
+                        println!("query result for worker {worker_id} and test statement with index {i} statement {} error {:?}", st.statement, v);
                         check!(false, "query result for worker {worker_id} and test statement with index {i} is error or not found");
                     }
                 }
@@ -2419,7 +2468,8 @@ fn check_test_results<T: RdbmsType + Clone>(
                             check!(result.rows == expected_rows, "query stream result rows for worker {worker_id} and test statement with index {i} do not match");
                         }
                     }
-                    _ => {
+                    v => {
+                        println!("query result for worker {worker_id} and test statement with index {i} statement {} error {:?}", st.statement, v);
                         check!(false, "query stream result for worker {worker_id} and test statement with index {i} is error or not found");
                     }
                 }

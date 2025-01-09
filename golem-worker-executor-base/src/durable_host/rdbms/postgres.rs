@@ -879,6 +879,7 @@ enum DbColumnTypeResourceRep {
     Domain(u32),
     Array(u32),
     Composite(Vec<u32>),
+    Range(u32),
 }
 
 impl DbColumnTypeResourceRep {
@@ -896,6 +897,11 @@ impl DbColumnTypeResourceRep {
             }
             DbColumnTypeResourceRep::Composite(_)
                 if !matches!(value, postgres_types::DbColumnType::Composite(_)) =>
+            {
+                false
+            }
+            DbColumnTypeResourceRep::Range(_)
+                if !matches!(value, postgres_types::DbColumnType::Range(_)) =>
             {
                 false
             }
@@ -920,6 +926,13 @@ impl DbColumnTypeResourceRep {
     fn get_array_rep(&self) -> Option<u32> {
         match self {
             DbColumnTypeResourceRep::Array(id) => Some(*id),
+            _ => None,
+        }
+    }
+
+    fn get_range_rep(&self) -> Option<u32> {
+        match self {
+            DbColumnTypeResourceRep::Range(id) => Some(*id),
             _ => None,
         }
     }
@@ -969,6 +982,7 @@ enum DbValueResourceRep {
     Domain(u32),
     Array(Vec<u32>),
     Composite(Vec<u32>),
+    Range((Option<u32>, Option<u32>)),
 }
 
 impl DbValueResourceRep {
@@ -985,6 +999,9 @@ impl DbValueResourceRep {
             DbValueResourceRep::Composite(_)
                 if !matches!(value, postgres_types::DbValue::Composite(_)) =>
             {
+                false
+            }
+            DbValueResourceRep::Range(_) if !matches!(value, postgres_types::DbValue::Range(_)) => {
                 false
             }
             _ => true,
@@ -1008,6 +1025,13 @@ impl DbValueResourceRep {
     fn get_domain_rep(&self) -> Option<u32> {
         match self {
             DbValueResourceRep::Domain(id) => Some(*id),
+            _ => None,
+        }
+    }
+
+    fn get_range_rep(&self) -> Option<(Option<u32>, Option<u32>)> {
+        match self {
+            DbValueResourceRep::Range(id) => Some(*id),
             _ => None,
         }
     }
@@ -1222,6 +1246,23 @@ fn to_db_value(
                 DbValueResourceRep::Domain(v.value.rep()),
             )
         }
+        // DbValue::Range(v) => {
+        //
+        //     let start_value = resource_table
+        //         .get::<LazyDbValueEntry>(&v.value)
+        //         .map_err(|e| e.to_string())?
+        //         .value
+        //         .clone();
+        //     let end_value = resource_table
+        //         .get::<LazyDbValueEntry>(&v.value)
+        //         .map_err(|e| e.to_string())?
+        //         .value
+        //         .clone();
+        //     DbValueWithResourceRep::new(
+        //         postgres_types::DbValue::Range(postgres_types::Range::new(v.name, value.value)),
+        //         DbValueResourceRep::Range(v.value.rep()),
+        //     )
+        // }
         DbValue::Null => Ok(DbValueWithResourceRep::new_resource_none(
             postgres_types::DbValue::Null,
         )),
@@ -1403,6 +1444,29 @@ fn from_db_value(
                 DbValueResourceRep::Array(new_resource_reps),
             ))
         }
+        // postgres_types::DbValue::Range(v) => {
+        //
+        //     let s = *v.value.start;
+        //     let e = *v.value.end;
+        //
+        //     let value = if let Some(r) = value.resource_rep.get_range_rep() {
+        //         Resource::new_own(r)
+        //     } else {
+        //         resource_table
+        //             .push(LazyDbValueEntry::new(
+        //                 DbValueWithResourceRep::new_resource_none(s),
+        //             ))
+        //             .map_err(|e| e.to_string())?
+        //     };
+        //     let new_resource_rep = value.rep();
+        //     Ok((
+        //         DbValue::Domain(Domain {
+        //             name: v.name,
+        //             value,
+        //         }),
+        //         DbValueResourceRep::Domain(new_resource_rep),
+        //     ))
+        // }
         postgres_types::DbValue::Range(_) => todo!(),
         postgres_types::DbValue::Null => Ok((DbValue::Null, DbValueResourceRep::None)),
     }
@@ -1607,6 +1671,25 @@ fn from_db_column_type(
                 DbColumnTypeResourceRep::Array(new_resource_rep),
             ))
         }
+        // postgres_types::DbColumnType::Range(v) => {
+        //     let value = if let Some(r) = value.resource_rep.get_range_rep() {
+        //         Resource::new_own(r)
+        //     } else {
+        //         resource_table
+        //             .push(LazyDbColumnTypeEntry::new(
+        //                 DbColumnTypeWithResourceRep::new_resource_none(*v.base_type),
+        //             ))
+        //             .map_err(|e| e.to_string())?
+        //     };
+        //     let new_resource_rep = value.rep();
+        //     Ok((
+        //         DbColumnType::Range(RangeType {
+        //             name: v.name,
+        //             base_type: value,
+        //         }),
+        //         DbColumnTypeResourceRep::Range(new_resource_rep),
+        //     ))
+        // }
         postgres_types::DbColumnType::Range(_) => todo!(),
     }
 }
@@ -1771,7 +1854,20 @@ fn to_db_column_type(
                 postgres_types::DbColumnType::Array(Box::new(value.value)),
                 DbColumnTypeResourceRep::Array(v.rep()),
             )
-        }
+        } // DbColumnType::Range(v) => {
+          //     let value = resource_table
+          //         .get::<LazyDbColumnTypeEntry>(&v.base_type)
+          //         .map_err(|e| e.to_string())?
+          //         .value
+          //         .clone();
+          //     DbColumnTypeWithResourceRep::new(
+          //         postgres_types::DbColumnType::Range(postgres_types::RangeType::new(
+          //             v.name,
+          //             value.value,
+          //         )),
+          //         DbColumnTypeResourceRep::Range(v.base_type.rep()),
+          //     )
+          // }
     }
 }
 
@@ -2060,6 +2156,33 @@ pub mod tests {
                     ],
                 )),
             ]),
+            postgres_types::DbValue::Array(vec![
+                postgres_types::DbValue::Range(postgres_types::Range::new(
+                    "float4range".to_string(),
+                    postgres_types::ValuesRange::new(Bound::Unbounded, Bound::Unbounded),
+                )),
+                postgres_types::DbValue::Range(postgres_types::Range::new(
+                    "float4range".to_string(),
+                    postgres_types::ValuesRange::new(
+                        Bound::Unbounded,
+                        Bound::Excluded(postgres_types::DbValue::Float4(6.55)),
+                    ),
+                )),
+                postgres_types::DbValue::Range(postgres_types::Range::new(
+                    "float4range".to_string(),
+                    postgres_types::ValuesRange::new(
+                        Bound::Included(postgres_types::DbValue::Float4(2.23)),
+                        Bound::Excluded(postgres_types::DbValue::Float4(4.55)),
+                    ),
+                )),
+                postgres_types::DbValue::Range(postgres_types::Range::new(
+                    "float4range".to_string(),
+                    postgres_types::ValuesRange::new(
+                        Bound::Included(postgres_types::DbValue::Float4(1.23)),
+                        Bound::Unbounded,
+                    ),
+                )),
+            ]),
             postgres_types::DbValue::Domain(postgres_types::Domain::new(
                 "ddd".to_string(),
                 postgres_types::DbValue::Varchar("tag2".to_string()),
@@ -2120,6 +2243,15 @@ pub mod tests {
         let value = postgres_types::DbColumnType::Domain(postgres_types::DomainType::new(
             "posint8".to_string(),
             postgres_types::DbColumnType::Int8,
+        ));
+
+        check_db_column_type(value.clone(), &mut resource_table);
+
+        check_db_column_type(value.clone().into_array(), &mut resource_table);
+
+        let value = postgres_types::DbColumnType::Range(postgres_types::RangeType::new(
+            "float4range".to_string(),
+            postgres_types::DbColumnType::Float4,
         ));
 
         check_db_column_type(value.clone(), &mut resource_table);

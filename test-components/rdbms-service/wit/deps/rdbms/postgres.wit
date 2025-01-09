@@ -40,6 +40,7 @@ interface postgres {
     excluded(timestamp),
     unbounded
   }
+
   variant tstzbound {
     included(timestamptz),
     excluded(timestamptz),
@@ -222,12 +223,12 @@ interface postgres {
   }
 
   resource lazy-db-value {
-constructor(value: db-value);
+    constructor(value: db-value);
     get: func() -> db-value;
   }
 
   resource lazy-db-column-type {
-constructor(value: db-column-type);
+    constructor(value: db-column-type);
     get: func() -> db-column-type;
   }
 
