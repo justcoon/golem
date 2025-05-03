@@ -58,9 +58,10 @@ use golem_common::model::public_oplog::{
     ImportedFunctionInvokedParameters, JumpParameters, LogParameters, ManualUpdateParameters,
     PendingUpdateParameters, PendingWorkerInvocationParameters, PluginInstallationDescription,
     PublicExternalSpanData, PublicLocalSpanData, PublicOplogEntry, PublicSpanData,
-    PublicUpdateDescription, PublicWorkerInvocation, ResourceParameters, RevertParameters,
-    SetSpanAttributeParameters, SnapshotBasedUpdateParameters, StartSpanParameters,
-    SuccessfulUpdateParameters, TimestampParameter,
+    PublicUpdateDescription, PublicWorkerInvocation, RemoteTransactionParameters,
+    ResourceParameters, RevertParameters, SetSpanAttributeParameters,
+    SnapshotBasedUpdateParameters, StartSpanParameters, SuccessfulUpdateParameters,
+    TimestampParameter,
 };
 use golem_common::model::{
     ComponentId, ComponentVersion, Empty, IdempotencyKey, OwnedWorkerId, PromiseId, ShardId,
@@ -874,6 +875,54 @@ impl<T: GolemTypes> PublicOplogEntryOps<T> for PublicOplogEntry {
                     persistence_level: level,
                 }),
             ),
+            OplogEntry::BeginRemoteTransaction { timestamp } => Ok(
+                PublicOplogEntry::BeginRemoteTransaction(TimestampParameter { timestamp }),
+            ),
+            OplogEntry::PreCommitRemoteTransaction {
+                timestamp,
+                begin_index,
+            } => Ok(PublicOplogEntry::PreCommitRemoteTransaction(
+                RemoteTransactionParameters {
+                    timestamp,
+                    begin_index,
+                },
+            )),
+            OplogEntry::PreRollbackRemoteTransaction {
+                timestamp,
+                begin_index,
+            } => Ok(PublicOplogEntry::PreRollbackRemoteTransaction(
+                RemoteTransactionParameters {
+                    timestamp,
+                    begin_index,
+                },
+            )),
+            OplogEntry::CommitedRemoteTransaction {
+                timestamp,
+                begin_index,
+            } => Ok(PublicOplogEntry::CommitedRemoteTransaction(
+                RemoteTransactionParameters {
+                    timestamp,
+                    begin_index,
+                },
+            )),
+            OplogEntry::RolledBackRemoteTransaction {
+                timestamp,
+                begin_index,
+            } => Ok(PublicOplogEntry::RolledBackRemoteTransaction(
+                RemoteTransactionParameters {
+                    timestamp,
+                    begin_index,
+                },
+            )),
+            OplogEntry::AbortedRemoteTransaction {
+                timestamp,
+                begin_index,
+            } => Ok(PublicOplogEntry::AbortedRemoteTransaction(
+                RemoteTransactionParameters {
+                    timestamp,
+                    begin_index,
+                },
+            )),
         }
     }
 }
