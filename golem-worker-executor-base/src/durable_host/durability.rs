@@ -142,6 +142,7 @@ impl From<DurableFunctionType> for durability::DurableFunctionType {
             }
             DurableFunctionType::ReadRemote => durability::DurableFunctionType::ReadRemote,
             DurableFunctionType::ReadLocal => durability::DurableFunctionType::ReadLocal,
+            DurableFunctionType::WriteRemoteTransaction(_) => todo!(),
         }
     }
 }
