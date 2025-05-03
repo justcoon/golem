@@ -90,6 +90,27 @@ pub struct WriteRemoteBatchedParameters {
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "poem", oai(rename_all = "camelCase"))]
+#[serde(rename_all = "camelCase")]
+pub struct WriteRemoteTransactionParameters {
+    pub index: Option<OplogIndex>,
+}
+
+// #[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
+// #[cfg_attr(feature = "poem", derive(poem_openapi::Union))]
+// #[cfg_attr(feature = "poem", oai(discriminator_name = "type", one_of = true))]
+// #[serde(tag = "type")]
+// pub enum WriteRemoteTransactionParameters {
+//     Begin(Empty),
+//     PreCommit(Empty),
+//     Commited(Empty),
+//     PreRollback(Empty),
+//     RolledBack(Empty),
+//     Abort(Empty)
+// }
+
+#[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
 #[cfg_attr(feature = "poem", derive(poem_openapi::Union))]
 #[cfg_attr(feature = "poem", oai(discriminator_name = "type", one_of = true))]
 #[serde(tag = "type")]
@@ -111,6 +132,7 @@ pub enum PublicDurableFunctionType {
     /// this entry's index as the parameter. In batched remote writes it is the caller's responsibility
     /// to manually write an `EndRemoteWrite` entry (using `end_function`) when the operation is completed.
     WriteRemoteBatched(WriteRemoteBatchedParameters),
+    WriteRemoteTransaction(WriteRemoteTransactionParameters),
 }
 
 impl From<DurableFunctionType> for PublicDurableFunctionType {
@@ -124,6 +146,19 @@ impl From<DurableFunctionType> for PublicDurableFunctionType {
                 PublicDurableFunctionType::WriteRemoteBatched(WriteRemoteBatchedParameters {
                     index,
                 })
+            }
+            DurableFunctionType::WriteRemoteTransaction(index) => {
+                PublicDurableFunctionType::WriteRemoteTransaction(
+                    WriteRemoteTransactionParameters { index },
+                )
+                // match params {
+                //     WriteRemoteTransaction::Begin(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::Begin(Empty {})),
+                //     WriteRemoteTransaction::PreCommit(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::PreCommit(Empty {})),
+                //     WriteRemoteTransaction::Commited(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::Commited(Empty {})),
+                //     WriteRemoteTransaction::PreRollback(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::PreRollback(Empty {})),
+                //     WriteRemoteTransaction::RolledBack(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::RolledBack(Empty {})),
+                //     WriteRemoteTransaction::Abort(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::Abort(Empty {})),
+                // }
             }
         }
     }
@@ -152,6 +187,39 @@ impl IntoValue for PublicDurableFunctionType {
                 case_idx: 4,
                 case_value: Some(Box::new(params.index.into_value())),
             },
+            PublicDurableFunctionType::WriteRemoteTransaction(params) => {
+                let p = params.index.into_value();
+                // let p = match params {
+                //     WriteRemoteTransactionParameters::Begin(_) => Value::Variant {
+                //         case_idx: 0,
+                //         case_value: None,
+                //     },
+                //     WriteRemoteTransactionParameters::PreCommit(_) => Value::Variant {
+                //         case_idx: 1,
+                //         case_value: None,
+                //     },
+                //     WriteRemoteTransactionParameters::Commited(_) => Value::Variant {
+                //         case_idx: 2,
+                //         case_value: None,
+                //     },
+                //     WriteRemoteTransactionParameters::PreRollback(_) => Value::Variant {
+                //         case_idx: 3,
+                //         case_value: None,
+                //     },
+                //     WriteRemoteTransactionParameters::RolledBack(_) => Value::Variant {
+                //         case_idx: 4,
+                //         case_value: None,
+                //     },
+                //     WriteRemoteTransactionParameters::Abort(_) => Value::Variant {
+                //         case_idx: 5,
+                //         case_value: None,
+                //     }
+                // };
+                Value::Variant {
+                    case_idx: 5,
+                    case_value: Some(Box::new(p)),
+                }
+            }
         }
     }
 
@@ -162,6 +230,15 @@ impl IntoValue for PublicDurableFunctionType {
             unit_case("read-remote"),
             unit_case("write-remote"),
             case("write-remote-batched", option(u64())),
+            case("write-remote-transaction", option(u64())),
+            // case("write-remote-transaction", variant(vec![
+            //     unit_case("begin"),
+            //     unit_case("pre-commit"),
+            //     unit_case("commited"),
+            //     unit_case("pre-rollback"),
+            //     unit_case("rolled-back"),
+            //     unit_case("abort"),
+            // ])),
         ])
     }
 }
@@ -1214,6 +1291,31 @@ impl IntoValue for ChangePersistenceLevelParameters {
     }
 }
 
+#[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "poem", oai(rename_all = "camelCase"))]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteTransactionParameters {
+    pub timestamp: Timestamp,
+    pub begin_index: OplogIndex,
+}
+
+impl IntoValue for RemoteTransactionParameters {
+    fn into_value(self) -> Value {
+        Value::Record(vec![
+            self.timestamp.into_value(),
+            self.begin_index.into_value(),
+        ])
+    }
+
+    fn get_type() -> AnalysedType {
+        record(vec![
+            field("timestamp", Timestamp::get_type()),
+            field("begin-index", OplogIndex::get_type()),
+        ])
+    }
+}
+
 /// A mirror of the core `OplogEntry` type, without the undefined arbitrary payloads.
 ///
 /// Instead, it encodes all payloads with wasm-rpc `Value` types. This makes this the base type
@@ -1302,6 +1404,12 @@ pub enum PublicOplogEntry {
     SetSpanAttribute(SetSpanAttributeParameters),
     /// Change the current persistence level
     ChangePersistenceLevel(ChangePersistenceLevelParameters),
+    BeginRemoteTransaction(TimestampParameter),
+    PreCommitRemoteTransaction(RemoteTransactionParameters),
+    PreRollbackRemoteTransaction(RemoteTransactionParameters),
+    CommitedRemoteTransaction(RemoteTransactionParameters),
+    RolledBackRemoteTransaction(RemoteTransactionParameters),
+    AbortedRemoteTransaction(RemoteTransactionParameters),
 }
 
 impl PublicOplogEntry {
@@ -1597,6 +1705,30 @@ impl PublicOplogEntry {
                 Self::string_match("changepersistencelevel", &[], query_path, query)
                     || Self::string_match("change-persistence-level", &[], query_path, query)
                     || Self::string_match("persistence-level", &[], query_path, query)
+            }
+            PublicOplogEntry::BeginRemoteTransaction(_params) => {
+                Self::string_match("beginremotetransaction", &[], query_path, query)
+                    || Self::string_match("begin-remote-transaction", &[], query_path, query)
+            }
+            PublicOplogEntry::PreCommitRemoteTransaction(_params) => {
+                Self::string_match("precommitremotetransaction", &[], query_path, query)
+                    || Self::string_match("pre-commit-remote-transaction", &[], query_path, query)
+            }
+            PublicOplogEntry::PreRollbackRemoteTransaction(_params) => {
+                Self::string_match("prerollbackremotetransaction", &[], query_path, query)
+                    || Self::string_match("pre-rollback-remote-transaction", &[], query_path, query)
+            }
+            PublicOplogEntry::CommitedRemoteTransaction(_params) => {
+                Self::string_match("commitedremotetransaction", &[], query_path, query)
+                    || Self::string_match("commited-remote-transaction", &[], query_path, query)
+            }
+            PublicOplogEntry::RolledBackRemoteTransaction(_params) => {
+                Self::string_match("rolledbackremotetransaction", &[], query_path, query)
+                    || Self::string_match("rolled-back-remote-transaction", &[], query_path, query)
+            }
+            PublicOplogEntry::AbortedRemoteTransaction(_params) => {
+                Self::string_match("abortremotetransaction", &[], query_path, query)
+                    || Self::string_match("abort-remote-transaction", &[], query_path, query)
             }
         }
     }
@@ -1910,6 +2042,30 @@ impl IntoValue for PublicOplogEntry {
             },
             PublicOplogEntry::ChangePersistenceLevel(params) => Value::Variant {
                 case_idx: 32,
+                case_value: Some(Box::new(params.into_value())),
+            },
+            PublicOplogEntry::BeginRemoteTransaction(params) => Value::Variant {
+                case_idx: 33,
+                case_value: Some(Box::new(params.timestamp.into_value())),
+            },
+            PublicOplogEntry::PreCommitRemoteTransaction(params) => Value::Variant {
+                case_idx: 34,
+                case_value: Some(Box::new(params.into_value())),
+            },
+            PublicOplogEntry::PreRollbackRemoteTransaction(params) => Value::Variant {
+                case_idx: 35,
+                case_value: Some(Box::new(params.into_value())),
+            },
+            PublicOplogEntry::CommitedRemoteTransaction(params) => Value::Variant {
+                case_idx: 36,
+                case_value: Some(Box::new(params.into_value())),
+            },
+            PublicOplogEntry::RolledBackRemoteTransaction(params) => Value::Variant {
+                case_idx: 37,
+                case_value: Some(Box::new(params.into_value())),
+            },
+            PublicOplogEntry::AbortedRemoteTransaction(params) => Value::Variant {
+                case_idx: 38,
                 case_value: Some(Box::new(params.into_value())),
             },
         }
