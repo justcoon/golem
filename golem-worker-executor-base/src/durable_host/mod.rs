@@ -94,6 +94,7 @@ use std::vec;
 use tempfile::TempDir;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, info, span, warn, Instrument, Level};
+use try_match::try_match;
 use wasmtime::component::{Instance, Resource, ResourceAny};
 use wasmtime::{AsContext, AsContextMut};
 use wasmtime_wasi::bindings::filesystem::preopens::Descriptor;
@@ -2312,15 +2313,14 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
     pub async fn pre_commit_transaction_function(
         &mut self,
         function_type: &DurableFunctionType,
-        begin_index: OplogIndex,
     ) -> Result<(), GolemError> {
-        if matches!(
-            *function_type,
-            DurableFunctionType::WriteRemoteTransaction(None)
+        if let Ok(Some(begin_index)) = try_match!(
+            function_type,
+            DurableFunctionType::WriteRemoteTransaction(i)
         ) {
             if self.is_live() {
                 self.oplog
-                    .add(OplogEntry::pre_commit_remote_transaction(begin_index))
+                    .add_and_commit(OplogEntry::pre_commit_remote_transaction(*begin_index))
                     .await;
                 Ok(())
             } else {
@@ -2338,15 +2338,14 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
     pub async fn pre_rollback_transaction_function(
         &mut self,
         function_type: &DurableFunctionType,
-        begin_index: OplogIndex,
     ) -> Result<(), GolemError> {
-        if matches!(
-            *function_type,
-            DurableFunctionType::WriteRemoteTransaction(None)
+        if let Ok(Some(begin_index)) = try_match!(
+            function_type,
+            DurableFunctionType::WriteRemoteTransaction(i)
         ) {
             if self.is_live() {
                 self.oplog
-                    .add(OplogEntry::pre_rollback_remote_transaction(begin_index))
+                    .add_and_commit(OplogEntry::pre_rollback_remote_transaction(*begin_index))
                     .await;
                 Ok(())
             } else {
@@ -2372,7 +2371,7 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
         ) {
             if self.is_live() {
                 self.oplog
-                    .add(OplogEntry::commited_remote_transaction(begin_index))
+                    .add_and_commit(OplogEntry::commited_remote_transaction(begin_index))
                     .await;
                 Ok(())
             } else {
@@ -2398,7 +2397,7 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
         ) {
             if self.is_live() {
                 self.oplog
-                    .add(OplogEntry::rolled_back_remote_transaction(begin_index))
+                    .add_and_commit(OplogEntry::rolled_back_remote_transaction(begin_index))
                     .await;
                 Ok(())
             } else {
@@ -2424,7 +2423,7 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
         ) {
             if self.is_live() {
                 self.oplog
-                    .add(OplogEntry::abort_remote_transaction(begin_index))
+                    .add_and_commit(OplogEntry::abort_remote_transaction(begin_index))
                     .await;
                 Ok(())
             } else {
