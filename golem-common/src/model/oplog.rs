@@ -813,7 +813,7 @@ impl OplogEntry {
         }
     }
 
-    pub fn abort_remote_transaction(begin_index: OplogIndex) -> OplogEntry {
+    pub fn aborted_remote_transaction(begin_index: OplogIndex) -> OplogEntry {
         OplogEntry::AbortedRemoteTransaction {
             timestamp: Timestamp::now_utc(),
             begin_index,
@@ -867,6 +867,11 @@ impl OplogEntry {
                 ..
             } => match wrapped_function_type {
                 DurableFunctionType::WriteRemoteBatched(Some(begin_index))
+                    if *begin_index == idx =>
+                {
+                    true
+                }
+                DurableFunctionType::WriteRemoteTransaction(Some(begin_index))
                     if *begin_index == idx =>
                 {
                     true
