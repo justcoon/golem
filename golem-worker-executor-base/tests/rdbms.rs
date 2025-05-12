@@ -822,6 +822,7 @@ async fn rdbms_mysql_idempotency(
     let oplog = executor.get_oplog(&worker_id, OplogIndex::INITIAL).await;
     let oplog = serde_json::to_string(&oplog);
     check!(oplog.is_ok());
+    // println!("{}", oplog.unwrap());
 
     drop(executor);
 }
