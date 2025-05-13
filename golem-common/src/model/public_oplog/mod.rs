@@ -97,19 +97,6 @@ pub struct WriteRemoteTransactionParameters {
     pub index: Option<OplogIndex>,
 }
 
-// #[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
-// #[cfg_attr(feature = "poem", derive(poem_openapi::Union))]
-// #[cfg_attr(feature = "poem", oai(discriminator_name = "type", one_of = true))]
-// #[serde(tag = "type")]
-// pub enum WriteRemoteTransactionParameters {
-//     Begin(Empty),
-//     PreCommit(Empty),
-//     Commited(Empty),
-//     PreRollback(Empty),
-//     RolledBack(Empty),
-//     Abort(Empty)
-// }
-
 #[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
 #[cfg_attr(feature = "poem", derive(poem_openapi::Union))]
 #[cfg_attr(feature = "poem", oai(discriminator_name = "type", one_of = true))]
@@ -151,14 +138,6 @@ impl From<DurableFunctionType> for PublicDurableFunctionType {
                 PublicDurableFunctionType::WriteRemoteTransaction(
                     WriteRemoteTransactionParameters { index },
                 )
-                // match params {
-                //     WriteRemoteTransaction::Begin(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::Begin(Empty {})),
-                //     WriteRemoteTransaction::PreCommit(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::PreCommit(Empty {})),
-                //     WriteRemoteTransaction::Commited(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::Commited(Empty {})),
-                //     WriteRemoteTransaction::PreRollback(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::PreRollback(Empty {})),
-                //     WriteRemoteTransaction::RolledBack(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::RolledBack(Empty {})),
-                //     WriteRemoteTransaction::Abort(_) => PublicDurableFunctionType::WriteRemoteTransaction(WriteRemoteTransactionParameters::Abort(Empty {})),
-                // }
             }
         }
     }
@@ -187,39 +166,10 @@ impl IntoValue for PublicDurableFunctionType {
                 case_idx: 4,
                 case_value: Some(Box::new(params.index.into_value())),
             },
-            PublicDurableFunctionType::WriteRemoteTransaction(params) => {
-                let p = params.index.into_value();
-                // let p = match params {
-                //     WriteRemoteTransactionParameters::Begin(_) => Value::Variant {
-                //         case_idx: 0,
-                //         case_value: None,
-                //     },
-                //     WriteRemoteTransactionParameters::PreCommit(_) => Value::Variant {
-                //         case_idx: 1,
-                //         case_value: None,
-                //     },
-                //     WriteRemoteTransactionParameters::Commited(_) => Value::Variant {
-                //         case_idx: 2,
-                //         case_value: None,
-                //     },
-                //     WriteRemoteTransactionParameters::PreRollback(_) => Value::Variant {
-                //         case_idx: 3,
-                //         case_value: None,
-                //     },
-                //     WriteRemoteTransactionParameters::RolledBack(_) => Value::Variant {
-                //         case_idx: 4,
-                //         case_value: None,
-                //     },
-                //     WriteRemoteTransactionParameters::Abort(_) => Value::Variant {
-                //         case_idx: 5,
-                //         case_value: None,
-                //     }
-                // };
-                Value::Variant {
-                    case_idx: 5,
-                    case_value: Some(Box::new(p)),
-                }
-            }
+            PublicDurableFunctionType::WriteRemoteTransaction(params) => Value::Variant {
+                case_idx: 5,
+                case_value: Some(Box::new(params.index.into_value())),
+            },
         }
     }
 
@@ -231,14 +181,6 @@ impl IntoValue for PublicDurableFunctionType {
             unit_case("write-remote"),
             case("write-remote-batched", option(u64())),
             case("write-remote-transaction", option(u64())),
-            // case("write-remote-transaction", variant(vec![
-            //     unit_case("begin"),
-            //     unit_case("pre-commit"),
-            //     unit_case("commited"),
-            //     unit_case("pre-rollback"),
-            //     unit_case("rolled-back"),
-            //     unit_case("abort"),
-            // ])),
         ])
     }
 }
@@ -1295,6 +1237,31 @@ impl IntoValue for ChangePersistenceLevelParameters {
 #[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "poem", oai(rename_all = "camelCase"))]
 #[serde(rename_all = "camelCase")]
+pub struct BeginRemoteTransactionParameters {
+    pub timestamp: Timestamp,
+    pub transaction_id: String,
+}
+
+impl IntoValue for BeginRemoteTransactionParameters {
+    fn into_value(self) -> Value {
+        Value::Record(vec![
+            self.timestamp.into_value(),
+            self.transaction_id.into_value(),
+        ])
+    }
+
+    fn get_type() -> AnalysedType {
+        record(vec![
+            field("timestamp", Timestamp::get_type()),
+            field("transaction-id", str()),
+        ])
+    }
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
+#[cfg_attr(feature = "poem", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "poem", oai(rename_all = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 pub struct RemoteTransactionParameters {
     pub timestamp: Timestamp,
     pub begin_index: OplogIndex,
@@ -1404,7 +1371,7 @@ pub enum PublicOplogEntry {
     SetSpanAttribute(SetSpanAttributeParameters),
     /// Change the current persistence level
     ChangePersistenceLevel(ChangePersistenceLevelParameters),
-    BeginRemoteTransaction(TimestampParameter),
+    BeginRemoteTransaction(BeginRemoteTransactionParameters),
     PreCommitRemoteTransaction(RemoteTransactionParameters),
     PreRollbackRemoteTransaction(RemoteTransactionParameters),
     CommitedRemoteTransaction(RemoteTransactionParameters),
