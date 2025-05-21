@@ -2301,11 +2301,13 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
                         .await;
 
                     if end_index.is_none() {
+                        let mut aborted = false;
                         if pre_entry.is_pre_commit_remote_transaction(begin_index) {
                             let commited = handler.is_committed(&tx_id).await?;
                             let end_entry = if commited {
                                 OplogEntry::commited_remote_transaction(begin_index)
                             } else {
+                                aborted = true;
                                 OplogEntry::aborted_remote_transaction(begin_index)
                             };
                             self.replay_state.switch_to_live();
@@ -2315,6 +2317,7 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
                             let end_entry = if rolled_back {
                                 OplogEntry::rolled_back_remote_transaction(begin_index)
                             } else {
+                                aborted = true;
                                 OplogEntry::aborted_remote_transaction(begin_index)
                             };
                             self.replay_state.switch_to_live();
@@ -2322,6 +2325,19 @@ impl<Ctx: WorkerCtx> PrivateDurableWorkerState<Ctx> {
                         }
 
                         let _ = handler.cleanup(&tx_id).await;
+
+                        if aborted {
+                            let deleted_region = OplogRegion {
+                                start: begin_index.next(), // need to keep the BeginAtomicRegion entry
+                                end: self.replay_state.replay_target().next(), // skipping the Jump entry too
+                            };
+                            self.replay_state
+                                .add_skipped_region(deleted_region.clone())
+                                .await;
+                            self.oplog
+                                .add_and_commit(OplogEntry::jump(deleted_region))
+                                .await;
+                        }
                     }
                 } else {
                     // We need to jump to the end of the oplog
