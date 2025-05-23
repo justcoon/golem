@@ -77,9 +77,7 @@ impl Display for RdbmsStatus {
 }
 
 #[async_trait]
-pub trait DbTransaction<T: RdbmsType> {
-    fn transaction_id(&self) -> RdbmsTransactionId;
-
+pub trait RdbmsQueryExecutor<T: RdbmsType> {
     async fn execute(&self, statement: &str, params: Vec<T::DbValue>) -> Result<u64, Error>
     where
         <T as RdbmsType>::DbValue: 'async_trait;
@@ -95,6 +93,27 @@ pub trait DbTransaction<T: RdbmsType> {
     ) -> Result<Arc<dyn DbResultStream<T> + Send + Sync>, Error>
     where
         <T as RdbmsType>::DbValue: 'async_trait;
+}
+
+#[async_trait]
+pub trait DbTransaction<T: RdbmsType>: RdbmsQueryExecutor<T> {
+    fn transaction_id(&self) -> RdbmsTransactionId;
+
+    // async fn execute(&self, statement: &str, params: Vec<T::DbValue>) -> Result<u64, Error>
+    // where
+    //     <T as RdbmsType>::DbValue: 'async_trait;
+    //
+    // async fn query(&self, statement: &str, params: Vec<T::DbValue>) -> Result<DbResult<T>, Error>
+    // where
+    //     <T as RdbmsType>::DbValue: 'async_trait;
+    //
+    // async fn query_stream(
+    //     &self,
+    //     statement: &str,
+    //     params: Vec<T::DbValue>,
+    // ) -> Result<Arc<dyn DbResultStream<T> + Send + Sync>, Error>
+    // where
+    //     <T as RdbmsType>::DbValue: 'async_trait;
 
     async fn pre_commit(&self) -> Result<(), Error>;
 
@@ -105,6 +124,18 @@ pub trait DbTransaction<T: RdbmsType> {
     async fn rollback(&self) -> Result<(), Error>;
 
     async fn rollback_if_open(&self) -> Result<(), Error>;
+}
+
+#[async_trait]
+pub trait RdbmsConnection<T: RdbmsType>: RdbmsQueryExecutor<T> {
+    async fn begin_transaction(&self) -> Result<Arc<dyn DbTransaction<T> + Send + Sync>, Error>;
+
+    async fn get_transaction_status(
+        &self,
+        transaction_id: &RdbmsTransactionId,
+    ) -> Result<RdbmsTransactionStatus, Error>;
+
+    async fn cleanup_transaction(&self, transaction_id: &RdbmsTransactionId) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -164,6 +195,12 @@ pub trait Rdbms<T: RdbmsType> {
         worker_id: &WorkerId,
         transaction_id: &RdbmsTransactionId,
     ) -> Result<(), Error>;
+
+    async fn connection(
+        &self,
+        key: &RdbmsPoolKey,
+        worker_id: &WorkerId,
+    ) -> Result<Arc<dyn RdbmsConnection<T> + Send + Sync>, Error>;
 
     fn status(&self) -> RdbmsStatus;
 }

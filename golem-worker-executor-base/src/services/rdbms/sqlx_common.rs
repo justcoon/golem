@@ -15,8 +15,8 @@
 use crate::services::golem_config::{RdbmsConfig, RdbmsPoolConfig, RdbmsQueryConfig};
 use crate::services::rdbms::metrics::record_rdbms_metrics;
 use crate::services::rdbms::{
-    DbResult, DbResultStream, DbRow, DbTransaction, Error, Rdbms, RdbmsPoolKey, RdbmsStatus,
-    RdbmsTransactionId, RdbmsTransactionStatus, RdbmsType,
+    DbResult, DbResultStream, DbRow, DbTransaction, Error, Rdbms, RdbmsConnection, RdbmsPoolKey,
+    RdbmsQueryExecutor, RdbmsStatus, RdbmsTransactionId, RdbmsTransactionStatus, RdbmsType,
 };
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -35,6 +35,253 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::Instant;
 use tracing::{debug, error, info};
+
+#[derive(Clone)]
+pub(crate) struct SqlxRdbmsConnection<T, DB>
+where
+    T: RdbmsType,
+    DB: Database,
+{
+    rdbms_type: T,
+    pool_key: RdbmsPoolKey,
+    pool: Arc<Pool<DB>>,
+    query_config: RdbmsQueryConfig,
+}
+
+impl<T, DB> SqlxRdbmsConnection<T, DB>
+where
+    T: RdbmsType
+        + Sync
+        + QueryExecutor<T, DB>
+        + BeginTransactionSupport<T, DB>
+        + TransactionSupport<T, DB>,
+    DB: Database,
+{
+    pub(crate) fn new(
+        pool_key: RdbmsPoolKey,
+        pool: Arc<Pool<DB>>,
+        query_config: RdbmsQueryConfig,
+    ) -> Self {
+        let rdbms_type = T::default();
+
+        Self {
+            rdbms_type,
+            pool_key,
+            pool,
+            query_config,
+        }
+    }
+
+    fn record_metrics<R>(
+        &self,
+        name: &'static str,
+        start: Instant,
+        result: Result<R, Error>,
+    ) -> Result<R, Error> {
+        record_rdbms_metrics(&self.rdbms_type, name, start, result)
+    }
+}
+
+#[async_trait]
+impl<T, DB> RdbmsConnection<T> for SqlxRdbmsConnection<T, DB>
+where
+    T: RdbmsType
+        + Sync
+        + QueryExecutor<T, DB>
+        + BeginTransactionSupport<T, DB>
+        + TransactionSupport<T, DB>
+        + 'static,
+    DB: Database,
+    for<'c> &'c mut <DB as Database>::Connection: sqlx::Executor<'c, Database = DB>,
+    RdbmsPoolKey: PoolCreator<DB>,
+{
+    async fn begin_transaction(&self) -> Result<Arc<dyn DbTransaction<T> + Send + Sync>, Error> {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            "begin transaction",
+        );
+
+        let result = {
+            T::begin_transaction(&self.pool_key, self.pool.clone(), self.query_config)
+                .await
+                .map(|r| r as Arc<dyn DbTransaction<T> + Send + Sync>)
+        };
+
+        let result = result.map_err(|e| {
+            error!(
+                rdbms_type = self.rdbms_type.to_string(),
+                pool_key = self.pool_key.to_string(),
+                "begin transaction - error: {}",
+                e
+            );
+            e
+        });
+        self.record_metrics("begin-transaction", start, result)
+    }
+
+    async fn get_transaction_status(
+        &self,
+        transaction_id: &RdbmsTransactionId,
+    ) -> Result<RdbmsTransactionStatus, Error> {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            transaction_id = transaction_id.to_string(),
+            "get transaction status",
+        );
+
+        let result = { T::get_transaction_status(self.pool.deref(), transaction_id).await };
+
+        let result = result.map_err(|e| {
+            error!(
+                rdbms_type = self.rdbms_type.to_string(),
+                pool_key = self.pool_key.to_string(),
+                transaction_id = transaction_id.to_string(),
+                "get transaction status - error: {}",
+                e
+            );
+            e
+        });
+        self.record_metrics("get-transaction-status", start, result)
+    }
+
+    async fn cleanup_transaction(&self, transaction_id: &RdbmsTransactionId) -> Result<(), Error> {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            transaction_id = transaction_id.to_string(),
+            "cleanup transaction",
+        );
+
+        let result = { T::cleanup_transaction(self.pool.deref(), transaction_id).await };
+
+        let result = result.map_err(|e| {
+            error!(
+                rdbms_type = self.rdbms_type.to_string(),
+                pool_key = self.pool_key.to_string(),
+                transaction_id = transaction_id.to_string(),
+                "cleanup transaction - error: {}",
+                e
+            );
+            e
+        });
+        self.record_metrics("cleanup-transaction", start, result)
+    }
+}
+
+#[async_trait]
+impl<T, DB> RdbmsQueryExecutor<T> for SqlxRdbmsConnection<T, DB>
+where
+    T: RdbmsType
+        + Sync
+        + QueryExecutor<T, DB>
+        + BeginTransactionSupport<T, DB>
+        + TransactionSupport<T, DB>
+        + 'static,
+    DB: Database,
+    for<'c> &'c mut <DB as Database>::Connection: sqlx::Executor<'c, Database = DB>,
+    RdbmsPoolKey: PoolCreator<DB>,
+{
+    async fn execute(&self, statement: &str, params: Vec<T::DbValue>) -> Result<u64, Error>
+    where
+        <T as RdbmsType>::DbValue: 'async_trait,
+    {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            "execute - statement: {}, params count: {}",
+            statement,
+            params.len()
+        );
+
+        let result = { T::execute(statement, params, self.pool.deref()).await };
+
+        let result = result.map_err(|e| {
+            error!(
+                rdbms_type = self.rdbms_type.to_string(),
+                pool_key = self.pool_key.to_string(),
+                "execute - statement: {}, error: {}",
+                statement,
+                e
+            );
+            e
+        });
+        self.record_metrics("execute", start, result)
+    }
+
+    async fn query_stream(
+        &self,
+        statement: &str,
+        params: Vec<T::DbValue>,
+    ) -> Result<Arc<dyn DbResultStream<T> + Send + Sync>, Error>
+    where
+        <T as RdbmsType>::DbValue: 'async_trait,
+    {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            "query stream - statement: {}, params count: {}",
+            statement,
+            params.len()
+        );
+
+        let result = {
+            T::query_stream(
+                statement,
+                params,
+                self.query_config.query_batch,
+                self.pool.deref(),
+            )
+            .await
+        };
+
+        let result = result.map_err(|e| {
+            error!(
+                rdbms_type = self.rdbms_type.to_string(),
+                pool_key = self.pool_key.to_string(),
+                "query stream - statement: {}, error: {}",
+                statement,
+                e
+            );
+            e
+        });
+        self.record_metrics("query-stream", start, result)
+    }
+
+    async fn query(&self, statement: &str, params: Vec<T::DbValue>) -> Result<DbResult<T>, Error>
+    where
+        <T as RdbmsType>::DbValue: 'async_trait,
+    {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            "query - statement: {}, params count: {}",
+            statement,
+            params.len()
+        );
+
+        let result = { T::query(statement, params, self.pool.deref()).await };
+
+        let result = result.map_err(|e| {
+            error!(
+                rdbms_type = self.rdbms_type.to_string(),
+                pool_key = self.pool_key.to_string(),
+                "query - statement: {}, error: {}",
+                statement,
+                e
+            );
+            e
+        });
+        self.record_metrics("query", start, result)
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct SqlxRdbms<T, DB>
@@ -408,6 +655,14 @@ where
             .collect();
         RdbmsStatus { pools }
     }
+
+    async fn connection(
+        &self,
+        key: &RdbmsPoolKey,
+        worker_id: &WorkerId,
+    ) -> Result<Arc<dyn RdbmsConnection<T> + Send + Sync>, Error> {
+        todo!()
+    }
 }
 
 #[async_trait]
@@ -612,7 +867,6 @@ where
         })
     }
 }
-
 #[async_trait]
 impl<T, DB> DbTransaction<T> for SqlxDbTransaction<T, DB>
 where
@@ -622,107 +876,6 @@ where
 {
     fn transaction_id(&self) -> RdbmsTransactionId {
         self.transaction_id.clone()
-    }
-
-    async fn execute(&self, statement: &str, params: Vec<T::DbValue>) -> Result<u64, Error>
-    where
-        <T as RdbmsType>::DbValue: 'async_trait,
-    {
-        let start = Instant::now();
-        debug!(
-            rdbms_type = self.rdbms_type.to_string(),
-            pool_key = self.pool_key.to_string(),
-            transaction_id = self.transaction_id.to_string(),
-            "execute - statement: {}, params count: {}",
-            statement,
-            params.len()
-        );
-
-        let mut tx_conn = self.tx_connection.0.lock().await;
-
-        let result = T::execute(statement, params, tx_conn.connection.deref_mut())
-            .await
-            .map_err(|e| {
-                error!(
-                    rdbms_type = self.rdbms_type.to_string(),
-                    pool_key = self.pool_key.to_string(),
-                    transaction_id = self.transaction_id.to_string(),
-                    "execute - statement: {}, error: {}",
-                    statement,
-                    e
-                );
-                e
-            });
-        self.record_metrics("execute", start, result)
-    }
-
-    async fn query(&self, statement: &str, params: Vec<T::DbValue>) -> Result<DbResult<T>, Error>
-    where
-        <T as RdbmsType>::DbValue: 'async_trait,
-    {
-        let start = Instant::now();
-        debug!(
-            rdbms_type = self.rdbms_type.to_string(),
-            pool_key = self.pool_key.to_string(),
-            transaction_id = self.transaction_id.to_string(),
-            "query - statement: {}, params count: {}",
-            statement,
-            params.len()
-        );
-
-        let mut tx_conn = self.tx_connection.0.lock().await;
-        let result = T::query(statement, params, tx_conn.connection.deref_mut())
-            .await
-            .map_err(|e| {
-                error!(
-                    rdbms_type = self.rdbms_type.to_string(),
-                    pool_key = self.pool_key.to_string(),
-                    transaction_id = self.transaction_id.to_string(),
-                    "query - statement: {}, error: {}",
-                    statement,
-                    e
-                );
-                e
-            });
-        self.record_metrics("query", start, result)
-    }
-
-    async fn query_stream(
-        &self,
-        statement: &str,
-        params: Vec<T::DbValue>,
-    ) -> Result<Arc<dyn DbResultStream<T> + Send + Sync>, Error>
-    where
-        <T as RdbmsType>::DbValue: 'async_trait,
-    {
-        let start = Instant::now();
-        debug!(
-            rdbms_type = self.rdbms_type.to_string(),
-            pool_key = self.pool_key.to_string(),
-            transaction_id = self.transaction_id.to_string(),
-            "query stream - statement: {}, params count: {}",
-            statement,
-            params.len()
-        );
-
-        let result = T::query_stream(
-            statement,
-            params,
-            self.query_config.query_batch,
-            self.tx_connection.clone(),
-        )
-        .await
-        .map_err(|e| {
-            error!(
-                rdbms_type = self.rdbms_type.to_string(),
-                pool_key = self.pool_key.to_string(),
-                "query stream - statement: {}, error: {}",
-                statement,
-                e
-            );
-            e
-        });
-        self.record_metrics("query-stream", start, result)
     }
 
     async fn pre_commit(&self) -> Result<(), Error> {
@@ -866,6 +1019,119 @@ where
 
         self.record_metrics("rollback-transaction-if-open", start, result)
             .or(Ok(()))
+    }
+}
+
+#[async_trait]
+impl<T, DB> RdbmsQueryExecutor<T> for SqlxDbTransaction<T, DB>
+where
+    T: RdbmsType + Sync + QueryExecutor<T, DB> + TransactionSupport<T, DB>,
+    DB: Database,
+    for<'c> &'c mut <DB as Database>::Connection: sqlx::Executor<'c, Database = DB>,
+{
+    // fn transaction_id(&self) -> RdbmsTransactionId {
+    //     self.transaction_id.clone()
+    // }
+
+    async fn execute(&self, statement: &str, params: Vec<T::DbValue>) -> Result<u64, Error>
+    where
+        <T as RdbmsType>::DbValue: 'async_trait,
+    {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            transaction_id = self.transaction_id.to_string(),
+            "execute - statement: {}, params count: {}",
+            statement,
+            params.len()
+        );
+
+        let mut tx_conn = self.tx_connection.0.lock().await;
+
+        let result = T::execute(statement, params, tx_conn.connection.deref_mut())
+            .await
+            .map_err(|e| {
+                error!(
+                    rdbms_type = self.rdbms_type.to_string(),
+                    pool_key = self.pool_key.to_string(),
+                    transaction_id = self.transaction_id.to_string(),
+                    "execute - statement: {}, error: {}",
+                    statement,
+                    e
+                );
+                e
+            });
+        self.record_metrics("execute", start, result)
+    }
+
+    async fn query(&self, statement: &str, params: Vec<T::DbValue>) -> Result<DbResult<T>, Error>
+    where
+        <T as RdbmsType>::DbValue: 'async_trait,
+    {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            transaction_id = self.transaction_id.to_string(),
+            "query - statement: {}, params count: {}",
+            statement,
+            params.len()
+        );
+
+        let mut tx_conn = self.tx_connection.0.lock().await;
+        let result = T::query(statement, params, tx_conn.connection.deref_mut())
+            .await
+            .map_err(|e| {
+                error!(
+                    rdbms_type = self.rdbms_type.to_string(),
+                    pool_key = self.pool_key.to_string(),
+                    transaction_id = self.transaction_id.to_string(),
+                    "query - statement: {}, error: {}",
+                    statement,
+                    e
+                );
+                e
+            });
+        self.record_metrics("query", start, result)
+    }
+
+    async fn query_stream(
+        &self,
+        statement: &str,
+        params: Vec<T::DbValue>,
+    ) -> Result<Arc<dyn DbResultStream<T> + Send + Sync>, Error>
+    where
+        <T as RdbmsType>::DbValue: 'async_trait,
+    {
+        let start = Instant::now();
+        debug!(
+            rdbms_type = self.rdbms_type.to_string(),
+            pool_key = self.pool_key.to_string(),
+            transaction_id = self.transaction_id.to_string(),
+            "query stream - statement: {}, params count: {}",
+            statement,
+            params.len()
+        );
+
+        let result = T::query_stream(
+            statement,
+            params,
+            self.query_config.query_batch,
+            self.tx_connection.clone(),
+        )
+        .await
+        .map_err(|e| {
+            error!(
+                rdbms_type = self.rdbms_type.to_string(),
+                pool_key = self.pool_key.to_string(),
+                "query stream - statement: {}, error: {}",
+                statement,
+                e
+            );
+            e
+        });
+        self.record_metrics("query-stream", start, result)
     }
 }
 
