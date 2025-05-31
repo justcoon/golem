@@ -308,12 +308,12 @@ impl From<PublicOplogEntry> for oplog::OplogEntry {
                 timestamp: timestamp.into(),
                 persistence_level: persistence_level.into(),
             }),
-            PublicOplogEntry::BeginRemoteTransaction(_) => todo!(),
-            PublicOplogEntry::PreCommitRemoteTransaction(_) => todo!(),
-            PublicOplogEntry::PreRollbackRemoteTransaction(_) => todo!(),
-            PublicOplogEntry::CommitedRemoteTransaction(_) => todo!(),
-            PublicOplogEntry::RolledBackRemoteTransaction(_) => todo!(),
-            PublicOplogEntry::AbortedRemoteTransaction(_) => todo!(),
+            PublicOplogEntry::BeginRemoteTransaction(_) => todo!(), // FIXME needs golem-wit update
+            PublicOplogEntry::PreCommitRemoteTransaction(_) => todo!(), // FIXME needs golem-wit update
+            PublicOplogEntry::PreRollbackRemoteTransaction(_) => todo!(), // FIXME needs golem-wit update
+            PublicOplogEntry::CommitedRemoteTransaction(_) => todo!(), // FIXME needs golem-wit update
+            PublicOplogEntry::RolledBackRemoteTransaction(_) => todo!(), // FIXME needs golem-wit update
+            PublicOplogEntry::AbortedRemoteTransaction(_) => todo!(), // FIXME needs golem-wit update
         }
     }
 }
@@ -338,7 +338,7 @@ impl From<PublicDurableFunctionType> for oplog::WrappedFunctionType {
             PublicDurableFunctionType::WriteRemoteBatched(WriteRemoteBatchedParameters {
                 index: idx,
             }) => Self::WriteRemoteBatched(idx.map(|idx| idx.into())),
-            PublicDurableFunctionType::WriteRemoteTransaction(_) => todo!(),
+            PublicDurableFunctionType::WriteRemoteTransaction(_) => todo!(), // FIXME needs golem-wit update
         }
     }
 }
